@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;\" + $env:PATH; cd \"C:\\\\Users\\\\vinicius\\\\post-repo\\\\post-master\"; npm run dev)",
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;\" + $env:PATH; cd \"C:\\\\Users\\\\vinicius\\\\post-repo\\\\post-master\"; npm run build 2>&1)"
+    ]
+  }
+}
