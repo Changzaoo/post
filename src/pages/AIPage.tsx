@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Layout } from '../components/Layout';
 import { motion } from 'framer-motion';
-import { Sparkles, RefreshCw, TrendingDown, TrendingUp, AlertTriangle, Zap, Target, Users, BarChart3, Clock, ChevronRight } from 'lucide-react';
-import { funnelMetrics } from '../data/funnelData';
-import { retentionMetrics } from '../data/retentionData';
-import { campaigns } from '../data/campaignData';
+import { useAuth } from '../contexts/AuthContext';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { Sparkles, RefreshCw, TrendingUp, AlertTriangle, Zap, Target, Users, BarChart3, Clock, ChevronRight } from 'lucide-react';
+import type { PublishedPost } from '../types';
 
 interface AISuggestion {
   id: string;
@@ -12,109 +13,59 @@ interface AISuggestion {
   priority: 'critical' | 'high' | 'medium' | 'low';
   title: string;
   description: string;
-  metric?: string;
-  metricValue?: string;
   action: string;
   path: string;
   icon: React.ElementType;
 }
 
-const suggestions: AISuggestion[] = [
+const staticSuggestions: AISuggestion[] = [
   {
-    id: '1',
-    type: 'warning',
-    priority: 'critical',
-    title: 'Taxa de conversão baixa na etapa de oferta',
-    description: 'Apenas 52% dos leads que visualizaram a oferta avançaram para o checkout. Adicione prova social — depoimentos em vídeo e número de alunos — diretamente antes do CTA principal.',
-    metric: 'Conversão Oferta → Checkout',
-    metricValue: '52%',
-    action: 'Otimizar página de oferta',
-    path: '/funil',
-    icon: AlertTriangle,
+    id: '1', type: 'action', priority: 'high',
+    title: 'Adapte o conteúdo para cada plataforma',
+    description: 'Usar o botão "Adaptar para plataformas" no Compositor aumenta significativamente o alcance, pois cada rede tem um formato ideal de texto, hashtags e comprimento.',
+    action: 'Ir ao Compositor', path: '/composer', icon: Zap,
   },
   {
-    id: '2',
-    type: 'warning',
-    priority: 'high',
-    title: 'Público abandona nos primeiros 3 segundos',
-    description: 'Seus dados mostram alta taxa de abandono inicial. Reforce o gancho nos primeiros 3 segundos — use uma afirmação provocadora ou revele a transformação imediatamente.',
-    metric: 'Taxa de Abandono',
-    metricValue: '32%',
-    action: 'Melhorar gancho inicial',
-    path: '/retencao',
-    icon: TrendingDown,
+    id: '2', type: 'opportunity', priority: 'high',
+    title: 'Publique vídeos curtos para maior alcance',
+    description: 'Posts com vídeo (reels, shorts) geram até 3× mais engajamento que posts de texto. Experimente adicionar vídeos curtos de 15–30 segundos.',
+    action: 'Ver Reels', path: '/reels', icon: TrendingUp,
   },
   {
-    id: '3',
-    type: 'opportunity',
-    priority: 'high',
-    title: 'Etapa de lead com bom desempenho, mas falta nutrição',
-    description: 'Você está capturando 3.472 leads mas apenas 42% avançam. Crie uma sequência de 3 a 5 conteúdos educativos enviados em 7 dias para elevar a taxa de avanço para 60%+.',
-    metric: 'Taxa de Avanço Lead',
-    metricValue: '42%',
-    action: 'Criar sequência de nutrição',
-    path: '/conteudos',
-    icon: TrendingUp,
+    id: '3', type: 'insight', priority: 'medium',
+    title: 'Mantenha uma frequência consistente',
+    description: 'Publicar regularmente (3–5 vezes por semana) é o principal fator de crescimento de audiência. Confira sua frequência na página de Retenção.',
+    action: 'Ver Retenção', path: '/retencao', icon: BarChart3,
   },
   {
-    id: '4',
-    type: 'insight',
-    priority: 'medium',
-    title: 'Campanhas com promessa visual clara performam melhor',
-    description: 'Das suas 6 campanhas ativas, as que usam imagem com texto de benefício no thumbnail têm 3x mais cliques. Aplique esse padrão em todas as novas campanhas.',
-    metric: 'CTR Médio',
-    metricValue: '+3x',
-    action: 'Atualizar campanhas',
-    path: '/campanhas',
-    icon: BarChart3,
+    id: '4', type: 'action', priority: 'medium',
+    title: 'Organize suas publicações em campanhas',
+    description: 'Agrupar posts em campanhas temáticas ajuda a medir o impacto de cada estratégia e facilita a análise de resultados por período ou objetivo.',
+    action: 'Ver Campanhas', path: '/campanhas', icon: Target,
   },
   {
-    id: '5',
-    type: 'action',
-    priority: 'high',
-    title: 'Crie uma oferta de entrada para leads frios',
-    description: 'Você tem 234 leads inativos há 14+ dias. Uma oferta de baixo ticket (R$ 27-97) com alta entrega de valor seria ideal para reativar esses leads e qualificá-los para ofertas maiores.',
-    metric: 'Leads Inativos',
-    metricValue: '234',
-    action: 'Criar oferta de entrada',
-    path: '/estrategias',
-    icon: Zap,
+    id: '5', type: 'warning', priority: 'high',
+    title: 'Conecte suas plataformas para publicação real',
+    description: 'Sem as integrações configuradas, seus posts ficam no modo "demo". Acesse Configurações para conectar Instagram, TikTok, Telegram e outros.',
+    action: 'Ir a Configurações', path: '/settings', icon: AlertTriangle,
   },
   {
-    id: '6',
-    type: 'opportunity',
-    priority: 'medium',
-    title: 'Retenção semanal em crescimento — aproveite o momento',
-    description: 'Sua retenção subiu de 58% para 70% nas últimas 8 semanas. Agora é o momento ideal para lançar uma comunidade paga ou upsell para quem mais engaja.',
-    metric: 'Crescimento de Retenção',
-    metricValue: '+12%',
-    action: 'Ver estratégia de comunidade',
-    path: '/estrategias',
-    icon: Users,
+    id: '6', type: 'opportunity', priority: 'medium',
+    title: 'Use hashtags estratégicas',
+    description: 'Hashtags relevantes e de nicho aumentam o alcance orgânico. Use entre 5 e 15 hashtags no Instagram e TikTok, e menos de 3 no LinkedIn e X.',
+    action: 'Criar post', path: '/composer', icon: Users,
   },
   {
-    id: '7',
-    type: 'action',
-    priority: 'medium',
-    title: 'TikTok é seu canal de maior alcance — aumente frequência',
-    description: 'Seu conteúdo no TikTok gera 124k de alcance vs 48k no Instagram. Considere aumentar a frequência de posts no TikTok de 3 para 5 por semana.',
-    metric: 'Alcance TikTok',
-    metricValue: '124k',
-    action: 'Planejar conteúdo TikTok',
-    path: '/conteudos',
-    icon: Target,
+    id: '7', type: 'insight', priority: 'low',
+    title: 'Revise o Checklist de Conversão',
+    description: 'O checklist contém os itens essenciais para maximizar conversões do seu funil. Complete os itens de alto impacto primeiro.',
+    action: 'Ver Checklist', path: '/checklist', icon: BarChart3,
   },
   {
-    id: '8',
-    type: 'insight',
-    priority: 'low',
-    title: 'Ticket médio de R$ 497 está abaixo do potencial',
-    description: 'Com sua taxa de retenção de 68% e base de leads qualificados, você tem audiência para ofertas de R$ 997+. Considere um produto premium para aumentar o LTV.',
-    metric: 'Ticket Médio Atual',
-    metricValue: 'R$ 497',
-    action: 'Explorar estratégia de alto ticket',
-    path: '/estrategias',
-    icon: BarChart3,
+    id: '8', type: 'action', priority: 'medium',
+    title: 'Explore as Estratégias recomendadas',
+    description: 'A seção Estratégias contém frameworks comprovados de funil, conteúdo e retenção. Escolha um template e aplique ao seu negócio.',
+    action: 'Ver Estratégias', path: '/estrategias', icon: Target,
   },
 ];
 
@@ -133,21 +84,41 @@ const priorityConfig = {
 };
 
 export function AIPage() {
+  const { user } = useAuth();
+  const [posts, setPosts] = useState<PublishedPost[]>([]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<'all' | 'warning' | 'opportunity' | 'action' | 'insight'>('all');
+
+  useEffect(() => {
+    if (!user) return;
+    getDocs(query(collection(db, 'publishedPosts'), where('userId', '==', user.uid))).then(snap => {
+      setPosts(snap.docs.map(d => ({ ...d.data(), id: d.id } as PublishedPost)));
+    });
+  }, [user]);
+
+  const totalPosts = posts.length;
+  const publishedOk = posts.filter(p => Object.values(p.results ?? {}).some(r => r.status === 'published')).length;
+  const withAI = posts.filter(p => p.adaptedContent !== null).length;
+
+  const suggestions = totalPosts === 0
+    ? staticSuggestions
+    : staticSuggestions.filter(s => {
+        if (s.id === '5' && publishedOk > 0) return false;
+        return true;
+      });
 
   const active = suggestions.filter(s => !dismissed.has(s.id) && (filter === 'all' || s.type === filter));
 
   const handleRefresh = () => {
     setLoading(true);
-    setTimeout(() => setLoading(false), 1500);
+    setDismissed(new Set());
+    setTimeout(() => setLoading(false), 900);
   };
 
   return (
     <Layout>
       <div style={{ maxWidth: 1000, margin: '0 auto' }}>
-        {/* Header */}
         <motion.div style={{ marginBottom: 24 }} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
             <div>
@@ -157,21 +128,19 @@ export function AIPage() {
                 </h1>
                 <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, background: 'rgba(32,245,216,0.10)', color: '#20F5D8', border: '0.5px solid rgba(32,245,216,0.22)' }}>Beta</span>
               </div>
-              <p style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Análise automatizada baseada nos seus dados de funil, retenção e campanhas</p>
+              <p style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Recomendações baseadas nos seus dados de publicação</p>
             </div>
             <button
-              className="btn btn-secondary btn-md"
-              style={{ gap: 7 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 16px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.10)', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
               onClick={handleRefresh}
               disabled={loading}
             >
               <RefreshCw size={14} style={{ animation: loading ? 'spin 0.9s linear infinite' : 'none' }} />
-              {loading ? 'Analisando...' : 'Gerar novas sugestões'}
+              {loading ? 'Atualizando...' : 'Atualizar sugestões'}
             </button>
           </div>
         </motion.div>
 
-        {/* AI Context banner */}
         <motion.div
           style={{ marginBottom: 22, padding: '16px 20px', borderRadius: 16, background: 'linear-gradient(90deg, rgba(139,92,246,0.10), rgba(59,110,255,0.08))', border: '0.5px solid rgba(139,92,246,0.20)', display: 'flex', alignItems: 'center', gap: 14 }}
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
@@ -181,19 +150,18 @@ export function AIPage() {
           </div>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
-              Análise baseada em dados reais do seu painel
+              Análise baseada nos seus dados reais
             </div>
             <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', lineHeight: 1.5 }}>
-              {funnelMetrics.totalVisitors.toLocaleString()} visitantes · {funnelMetrics.totalLeads.toLocaleString()} leads · {campaigns.filter(c => c.status === 'active').length} campanhas ativas · Retenção {retentionMetrics[0].value}%
+              {totalPosts} posts publicados · {publishedOk} confirmados · {withAI} adaptados com IA
             </div>
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5 }}>
             <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10D97A', animation: 'pulse-dot 2s ease-in-out infinite' }} />
-            <span style={{ fontSize: 11, color: '#10D97A', fontWeight: 600 }}>Conectado</span>
+            <span style={{ fontSize: 11, color: '#10D97A', fontWeight: 600 }}>Ao vivo</span>
           </div>
         </motion.div>
 
-        {/* Stats summary */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 22 }}>
           {[
             { label: 'Sugestões', value: suggestions.length, color: '#8B5CF6', bg: 'rgba(139,92,246,0.09)' },
@@ -209,7 +177,6 @@ export function AIPage() {
           ))}
         </div>
 
-        {/* Filter tabs */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 18, flexWrap: 'wrap' }}>
           {([
             { value: 'all', label: 'Todas' },
@@ -218,13 +185,16 @@ export function AIPage() {
             { value: 'action', label: 'Ações' },
             { value: 'insight', label: 'Insights' },
           ] as const).map(f => (
-            <button key={f.value} onClick={() => setFilter(f.value)} className={`btn btn-sm ${filter === f.value ? 'btn-primary' : 'btn-secondary'}`}>
+            <button
+              key={f.value}
+              onClick={() => setFilter(f.value)}
+              style={{ padding: '7px 14px', borderRadius: 9, fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', transition: 'all 150ms', ...(filter === f.value ? { background: 'linear-gradient(135deg, #3B6EFF, #1A5CFF)', color: '#fff' } : { background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)', border: '0.5px solid rgba(255,255,255,0.10)' }) }}
+            >
               {f.label}
             </button>
           ))}
         </div>
 
-        {/* Suggestion cards */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {active.map((suggestion, i) => {
             const tc = typeConfig[suggestion.type];
@@ -234,17 +204,14 @@ export function AIPage() {
                 key={suggestion.id}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 10, height: 0 }}
+                exit={{ opacity: 0, x: 10 }}
                 transition={{ delay: i * 0.05, duration: 0.28 }}
-                style={{ padding: '18px 20px', borderRadius: 16, background: tc.bg, border: `0.5px solid ${tc.border}`, position: 'relative' }}
+                style={{ padding: '18px 20px', borderRadius: 16, background: tc.bg, border: `0.5px solid ${tc.border}` }}
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-                  {/* Icon */}
                   <div style={{ width: 40, height: 40, borderRadius: 11, background: `${tc.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <suggestion.icon size={19} style={{ color: tc.color }} />
                   </div>
-
-                  {/* Content */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--text-primary)' }}>{suggestion.title}</span>
@@ -253,26 +220,16 @@ export function AIPage() {
                         <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20, background: `${pc.color}14`, color: pc.color, border: `0.5px solid ${pc.color}28` }}>{pc.label}</span>
                       </div>
                     </div>
-
                     <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 12 }}>{suggestion.description}</p>
-
-                    {suggestion.metric && (
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.04)', border: '0.5px solid rgba(255,255,255,0.07)', marginBottom: 14 }}>
-                        <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{suggestion.metric}:</span>
-                        <span style={{ fontSize: 13, fontWeight: 800, color: tc.color }}>{suggestion.metricValue}</span>
-                      </div>
-                    )}
-
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <a href={suggestion.path} style={{ textDecoration: 'none' }}>
-                        <button className="btn btn-sm" style={{ background: `${tc.color}18`, color: tc.color, border: `0.5px solid ${tc.color}28`, gap: 5 }}>
+                        <button style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, background: `${tc.color}18`, color: tc.color, border: `0.5px solid ${tc.color}28`, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                           {suggestion.action} <ChevronRight size={12} />
                         </button>
                       </a>
                       <button
-                        className="btn btn-ghost btn-sm"
                         onClick={() => setDismissed(prev => new Set(prev).add(suggestion.id))}
-                        style={{ color: 'var(--text-tertiary)' }}
+                        style={{ padding: '6px 10px', borderRadius: 8, background: 'transparent', border: 'none', fontSize: 12, color: 'var(--text-tertiary)', cursor: 'pointer' }}
                       >
                         Dispensar
                       </button>
@@ -288,19 +245,18 @@ export function AIPage() {
           <div style={{ textAlign: 'center', padding: '48px 24px' }}>
             <Sparkles size={40} style={{ color: 'var(--text-tertiary)', margin: '0 auto 14px' }} />
             <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6 }}>Nenhuma sugestão disponível</div>
-            <div style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Clique em "Gerar novas sugestões" para analisar seus dados</div>
+            <div style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Clique em "Atualizar sugestões" para recarregar</div>
           </div>
         )}
 
-        {/* Future AI banner */}
         <motion.div
           style={{ marginTop: 24, padding: '18px 20px', borderRadius: 16, background: 'rgba(255,255,255,0.02)', border: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 14 }}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
         >
           <Clock size={20} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
           <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 2 }}>IA com Inteligência Real em Breve</div>
-            <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Este módulo está preparado para receber uma API de IA real (Claude, GPT-4) para sugestões personalizadas e preditivas baseadas nos seus dados históricos.</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 2 }}>IA Preditiva em Breve</div>
+            <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Este módulo está preparado para integrar com Claude ou GPT-4 para sugestões preditivas e personalizadas baseadas nos seus dados históricos.</div>
           </div>
         </motion.div>
       </div>
