@@ -19,6 +19,24 @@ service cloud.firestore {
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
     }
 
+    // Campaigns - only the owner can read/write their own campaign records
+    match /campaigns/{campaignId} {
+      allow read, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.userId
+        && request.resource.data.userId == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+
+    // Creative Agent - creative assets are scoped by authenticated user
+    match /creatives/{creativeId} {
+      allow read, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.userId
+        && request.resource.data.userId == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+
     // Published posts - only the user can read their own
     match /publishedPosts/{postId} {
       allow read: if request.auth != null && request.auth.uid == resource.data.userId;

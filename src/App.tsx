@@ -19,6 +19,7 @@ import { CampaignsPage } from './pages/CampaignsPage';
 import { ContentsPage } from './pages/ContentsPage';
 import { ChecklistPage } from './pages/ChecklistPage';
 import { AIPage } from './pages/AIPage';
+import { CreativeAgentPage } from './pages/CreativeAgentPage';
 import type { ReactNode } from 'react';
 
 function Spinner() {
@@ -55,6 +56,7 @@ function AppRoutes() {
       <Route path="/conteudos"      element={<ProtectedRoute><ContentsPage /></ProtectedRoute>} />
       <Route path="/checklist"      element={<ProtectedRoute><ChecklistPage /></ProtectedRoute>} />
       <Route path="/ia"             element={<ProtectedRoute><AIPage /></ProtectedRoute>} />
+      <Route path="/criativos"      element={<ProtectedRoute><CreativeAgentPage /></ProtectedRoute>} />
 
       {/* Protected — Publishing */}
       <Route path="/composer"       element={<ProtectedRoute><Composer /></ProtectedRoute>} />

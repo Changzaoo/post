@@ -20,6 +20,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/conteudos':       'Conteúdos',
   '/checklist':       'Checklist de Conversão',
   '/ia':              'Sugestões IA',
+  '/criativos':       'Agente de Criativos',
   '/composer':        'Nova Publicação',
   '/calendar':        'Calendário',
   '/metrics':         'Métricas',

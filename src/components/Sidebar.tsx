@@ -4,7 +4,7 @@ import {
   LayoutDashboard, PenSquare, Calendar, BarChart3,
   Video, Clock, Settings2, Shield, LogOut,
   TrendingUp, X, Target, Users, Layers, CheckSquare,
-  Sparkles, Megaphone, FileText,
+  Sparkles, Megaphone, FileText, Palette,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -36,6 +36,7 @@ const navGroups: NavGroup[] = [
       { label: 'Retenção',           icon: Users,        path: '/retencao' },
       { label: 'Estratégias',        icon: Target,       path: '/estrategias' },
       { label: 'Campanhas',          icon: Megaphone,    path: '/campanhas' },
+      { label: 'Agente Criativos',   icon: Palette,      path: '/criativos', badge: 'Novo', badgeColor: '#FFD84D' },
       { label: 'Conteúdos',          icon: FileText,     path: '/conteudos' },
       { label: 'Checklist',          icon: CheckSquare,  path: '/checklist' },
       { label: 'Sugestões IA',       icon: Sparkles,     path: '/ia', badge: 'Beta', badgeColor: '#20F5D8' },
