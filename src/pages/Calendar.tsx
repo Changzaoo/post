@@ -1,206 +1,199 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { CalendarDays, ChevronLeft, ChevronRight, Clock, PenSquare, Plus } from 'lucide-react';
 import { Layout } from '../components/Layout';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, PenSquare, CalendarDays } from 'lucide-react';
+import { EmptyState } from '../components/ui/EmptyState';
+import { GlassButton } from '../components/ui/GlassButton';
+import { GlassCard } from '../components/ui/GlassCard';
+import { PageHeader } from '../components/ui/PageHeader';
 
-const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'];
 const MONTHS = [
-  'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
-  'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro',
+  'Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
 
-function getDaysInMonth(year: number, month: number) { return new Date(year, month + 1, 0).getDate(); }
-function getFirstDayOfMonth(year: number, month: number) { return new Date(year, month, 1).getDay(); }
+function getDaysInMonth(year: number, month: number) {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+function getFirstDayOfMonth(year: number, month: number) {
+  return new Date(year, month, 1).getDay();
+}
+
+function getEvents(day: number | null) {
+  if (!day) return [];
+  const events = [];
+  if (day % 5 === 0) events.push({ title: 'Post agendado', status: 'planned', time: '09:00' });
+  if (day % 7 === 0) events.push({ title: 'Publicado', status: 'success', time: '18:00' });
+  if (day % 11 === 0) events.push({ title: 'Rascunho criativo', status: 'pending', time: '14:30' });
+  return events;
+}
 
 export function Calendar() {
   const navigate = useNavigate();
   const today = new Date();
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [selectedDay, setSelectedDay] = useState<number>(today.getDate());
+  const [view, setView] = useState<'month' | 'week' | 'day'>('month');
 
   const daysInMonth = getDaysInMonth(currentYear, currentMonth);
   const firstDay = getFirstDayOfMonth(currentYear, currentMonth);
 
+  const cells = useMemo<(number | null)[]>(() => {
+    const nextCells: (number | null)[] = [
+      ...Array(firstDay).fill(null),
+      ...Array.from({ length: daysInMonth }, (_, index) => index + 1),
+    ];
+    while (nextCells.length % 7 !== 0) nextCells.push(null);
+    return nextCells;
+  }, [daysInMonth, firstDay]);
+
+  const agendaDays = useMemo(() => {
+    return Array.from({ length: daysInMonth }, (_, index) => index + 1)
+      .map((day) => ({ day, events: getEvents(day) }))
+      .filter((item) => item.events.length > 0);
+  }, [daysInMonth]);
+
+  const selectedEvents = getEvents(selectedDay);
+
   const prevMonth = () => {
-    if (currentMonth === 0) { setCurrentYear(y => y - 1); setCurrentMonth(11); }
-    else setCurrentMonth(m => m - 1);
-    setSelectedDay(null);
+    if (currentMonth === 0) {
+      setCurrentYear((year) => year - 1);
+      setCurrentMonth(11);
+    } else {
+      setCurrentMonth((month) => month - 1);
+    }
+    setSelectedDay(1);
   };
 
   const nextMonth = () => {
-    if (currentMonth === 11) { setCurrentYear(y => y + 1); setCurrentMonth(0); }
-    else setCurrentMonth(m => m + 1);
-    setSelectedDay(null);
+    if (currentMonth === 11) {
+      setCurrentYear((year) => year + 1);
+      setCurrentMonth(0);
+    } else {
+      setCurrentMonth((month) => month + 1);
+    }
+    setSelectedDay(1);
   };
 
-  const isToday = (day: number) =>
+  const isToday = (day: number | null) =>
     day === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear();
-
-  const cells: (number | null)[] = [
-    ...Array(firstDay).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
-  while (cells.length % 7 !== 0) cells.push(null);
 
   return (
     <Layout>
-      <div style={{ maxWidth: 720, margin: '0 auto' }}>
-        {/* Header */}
-        <motion.div style={{ marginBottom: 24 }} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-            <div>
-              <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.025em', marginBottom: 5 }}>
-                <span style={{ background: 'linear-gradient(90deg, #20F5D8, #7EB8FF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-                  Calendário
-                </span>
-              </h1>
-              <p style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Planeje e agende suas publicações</p>
+      <div className="pf-page calendar-page">
+        <PageHeader
+          eyebrow={<><CalendarDays size={14} /> Planejamento editorial</>}
+          title="Calendario"
+          description="Organize publicacoes, rascunhos e janelas de campanha em uma experiencia glass responsiva."
+          actions={
+            <GlassButton variant="primary" onClick={() => navigate('/composer')}>
+              <PenSquare size={16} /> Nova publicacao
+            </GlassButton>
+          }
+        />
+
+        <GlassCard className="calendar-shell" padded={false}>
+          <div className="calendar-toolbar">
+            <div className="calendar-month-controls">
+              <GlassButton variant="secondary" size="icon" aria-label="Mes anterior" onClick={prevMonth}>
+                <ChevronLeft size={18} />
+              </GlassButton>
+              <div>
+                <strong>{MONTHS[currentMonth]} {currentYear}</strong>
+                <span>{view === 'month' ? 'Visao mensal' : view === 'week' ? 'Visao semanal' : 'Agenda do dia'}</span>
+              </div>
+              <GlassButton variant="secondary" size="icon" aria-label="Proximo mes" onClick={nextMonth}>
+                <ChevronRight size={18} />
+              </GlassButton>
             </div>
-            <button
-              onClick={() => navigate('/composer')}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, background: 'linear-gradient(135deg, #3B6EFF, #1A5CFF)', color: '#fff', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer', boxShadow: '0 4px 14px rgba(59,110,255,0.35)' }}
-            >
-              <PenSquare size={13} /> Nova publicação
-            </button>
-          </div>
-        </motion.div>
 
-        {/* Calendar card */}
-        <motion.div className="glass-card" style={{ padding: 20 }} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          {/* Month navigation */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-            <button
-              onClick={prevMonth}
-              style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-secondary)', transition: 'all 200ms' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(59,110,255,0.12)'; (e.currentTarget as HTMLButtonElement).style.color = '#7EB8FF'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <h2 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.015em' }}>
-              {MONTHS[currentMonth]} {currentYear}
-            </h2>
-            <button
-              onClick={nextMonth}
-              style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-secondary)', transition: 'all 200ms' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(59,110,255,0.12)'; (e.currentTarget as HTMLButtonElement).style.color = '#7EB8FF'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)'; }}
-            >
-              <ChevronRight size={16} />
-            </button>
+            <div className="segmented-control" aria-label="Visualizacao do calendario">
+              <button className={view === 'month' ? 'active' : ''} onClick={() => setView('month')} type="button">Mes</button>
+              <button className={view === 'week' ? 'active' : ''} onClick={() => setView('week')} type="button">Semana</button>
+              <button className={view === 'day' ? 'active' : ''} onClick={() => setView('day')} type="button">Dia</button>
+            </div>
           </div>
 
-          {/* Weekday headers */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 6 }}>
-            {WEEKDAYS.map((d) => (
-              <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)', padding: '6px 0', letterSpacing: '0.04em', textTransform: 'uppercase' }}>{d}</div>
-            ))}
-          </div>
-
-          {/* Calendar grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
-            {cells.map((day, i) => {
-              const todayDay = isToday(day!);
-              const selectedThisDay = day === selectedDay;
-              return (
-                <div
-                  key={i}
-                  onClick={() => day && setSelectedDay(day === selectedDay ? null : day)}
-                  style={{
-                    minHeight: 52, borderRadius: 10, padding: 8,
-                    cursor: day ? 'pointer' : 'default',
-                    background: todayDay
-                      ? 'rgba(59,110,255,0.10)'
-                      : selectedThisDay
-                      ? 'rgba(59,110,255,0.08)'
-                      : 'transparent',
-                    border: selectedThisDay && !todayDay
-                      ? '0.5px solid rgba(59,110,255,0.35)'
-                      : todayDay
-                      ? '0.5px solid rgba(59,110,255,0.30)'
-                      : '0.5px solid transparent',
-                    transition: 'all 150ms',
-                  }}
-                  onMouseEnter={e => { if (day && !todayDay && !selectedThisDay) (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.03)'; }}
-                  onMouseLeave={e => { if (day && !todayDay && !selectedThisDay) (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
-                >
-                  {day && (
-                    <>
-                      <span style={todayDay ? {
-                        display: 'inline-flex', width: 24, height: 24, alignItems: 'center', justifyContent: 'center',
-                        borderRadius: '50%', background: 'linear-gradient(135deg, #3B6EFF, #1A5CFF)',
-                        fontSize: 11, fontWeight: 800, color: '#fff',
-                      } : {
-                        fontSize: 12, fontWeight: 500,
-                        color: selectedThisDay ? '#7EB8FF' : 'var(--text-secondary)',
-                      }}>
-                        {day}
-                      </span>
-                      {day % 7 === 0 && (
-                        <div style={{ marginTop: 4, display: 'flex', gap: 3 }}>
-                          <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#10D97A' }} />
-                        </div>
+          <div className="calendar-content">
+            <section className="calendar-grid-panel" aria-label="Calendario mensal">
+              <div className="calendar-weekdays">
+                {WEEKDAYS.map((weekday) => <span key={weekday}>{weekday}</span>)}
+              </div>
+              <div className="calendar-grid">
+                {cells.map((day, index) => {
+                  const events = getEvents(day);
+                  const active = day === selectedDay;
+                  return (
+                    <button
+                      key={`${day ?? 'empty'}-${index}`}
+                      type="button"
+                      className={`calendar-day${day ? '' : ' is-empty'}${isToday(day) ? ' is-today' : ''}${active ? ' is-active' : ''}`}
+                      onClick={() => day && setSelectedDay(day)}
+                      disabled={!day}
+                    >
+                      {day && (
+                        <>
+                          <span>{day}</span>
+                          <div className="calendar-event-dots">
+                            {events.slice(0, 3).map((event) => (
+                              <i key={`${event.title}-${event.time}`} data-status={event.status} />
+                            ))}
+                          </div>
+                        </>
                       )}
-                      {day % 5 === 0 && (
-                        <div style={{ marginTop: 4, display: 'flex', gap: 3 }}>
-                          <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#3B6EFF' }} />
-                          <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#8B5CF6' }} />
-                        </div>
-                      )}
-                    </>
-                  )}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            <aside className="calendar-agenda-panel">
+              <div className="calendar-agenda-header">
+                <div>
+                  <strong>{selectedDay} de {MONTHS[currentMonth]}</strong>
+                  <span>{selectedEvents.length} evento(s)</span>
                 </div>
-              );
-            })}
-          </div>
-
-          {/* Legend */}
-          <div style={{ display: 'flex', gap: 16, marginTop: 16, paddingTop: 16, borderTop: '0.5px solid rgba(255,255,255,0.06)', fontSize: 11, color: 'var(--text-tertiary)', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#10D97A' }} /> Publicado
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#3B6EFF' }} /> Agendado
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#8B5CF6' }} /> Rascunho
-            </div>
-            <span style={{ opacity: 0.5 }}>· Dados demo</span>
-          </div>
-        </motion.div>
-
-        {/* Day detail */}
-        <AnimatePresence>
-          {selectedDay && (
-            <motion.div
-              className="glass-card"
-              style={{ padding: 20, marginTop: 14 }}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.2 }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-                  {selectedDay} de {MONTHS[currentMonth]}
-                </h3>
-                <button
-                  onClick={() => navigate('/composer')}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, background: 'linear-gradient(135deg, #3B6EFF, #1A5CFF)', color: '#fff', fontWeight: 600, fontSize: 12, border: 'none', cursor: 'pointer' }}
-                >
-                  <PenSquare size={11} /> Criar post
-                </button>
+                <GlassButton variant="secondary" size="sm" onClick={() => navigate('/composer')}>
+                  <Plus size={14} /> Criar
+                </GlassButton>
               </div>
-              <div style={{ textAlign: 'center', padding: '24px 0' }}>
-                <CalendarDays size={32} style={{ color: 'var(--text-tertiary)', margin: '0 auto 10px' }} />
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4 }}>Nenhum post agendado para este dia.</p>
-                <p style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Agendamento de posts em breve.</p>
+
+              {selectedEvents.length === 0 ? (
+                <EmptyState
+                  className="calendar-empty"
+                  icon={<CalendarDays size={28} />}
+                  title="Sem posts neste dia"
+                  description="Use a agenda para preparar o proximo conteudo."
+                />
+              ) : (
+                <div className="calendar-event-list">
+                  {selectedEvents.map((event) => (
+                    <article className="calendar-event-card" key={`${event.title}-${event.time}`}>
+                      <span className="status-chip" data-status={event.status}>{event.status === 'success' ? 'Publicado' : event.status === 'planned' ? 'Agendado' : 'Rascunho'}</span>
+                      <strong>{event.title}</strong>
+                      <small><Clock size={13} /> {event.time}</small>
+                    </article>
+                  ))}
+                </div>
+              )}
+
+              <div className="calendar-mobile-agenda">
+                <strong>Agenda do mes</strong>
+                {agendaDays.map((item) => (
+                  <button key={item.day} type="button" onClick={() => setSelectedDay(item.day)} className={item.day === selectedDay ? 'active' : ''}>
+                    <span>{item.day}</span>
+                    <div>
+                      {item.events.map((event) => <em key={`${item.day}-${event.title}`}>{event.title}</em>)}
+                    </div>
+                  </button>
+                ))}
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </aside>
+          </div>
+        </GlassCard>
       </div>
     </Layout>
   );

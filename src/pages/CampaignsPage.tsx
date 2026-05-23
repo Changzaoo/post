@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
+import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
+import { Calendar, Edit3, Megaphone, Pause, Plus, Target, Trash2, TrendingUp } from 'lucide-react';
 import { Layout } from '../components/Layout';
-import { motion, AnimatePresence } from 'framer-motion';
+import { DataPanel } from '../components/ui/DataPanel';
+import { EmptyState } from '../components/ui/EmptyState';
+import { GlassButton } from '../components/ui/GlassButton';
+import { GlassInput, GlassSelect } from '../components/ui/GlassInput';
+import { GlassModal } from '../components/ui/GlassModal';
+import { MetricCard } from '../components/ui/MetricCard';
+import { PageHeader } from '../components/ui/PageHeader';
 import { useAuth } from '../contexts/AuthContext';
-import {
-  collection, query, where, orderBy, getDocs,
-  addDoc, updateDoc, deleteDoc, doc, serverTimestamp,
-} from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Megaphone, X, Plus, Calendar, TrendingUp, Target, Trash2 } from 'lucide-react';
 
 type CampaignStatus = 'active' | 'planned' | 'paused' | 'finished';
 
@@ -20,105 +23,83 @@ interface Campaign {
   status: CampaignStatus;
   startDate: string;
   endDate: string;
-  createdAt?: any;
+  createdAt?: unknown;
 }
 
-const statusConfig: Record<CampaignStatus, { label: string; color: string; bg: string; border: string }> = {
-  active:   { label: 'Ativa',       color: '#10D97A', bg: 'rgba(16,217,122,0.10)',  border: 'rgba(16,217,122,0.22)' },
-  planned:  { label: 'Planejada',   color: '#94A3B8', bg: 'rgba(148,163,184,0.09)', border: 'rgba(148,163,184,0.20)' },
-  paused:   { label: 'Pausada',     color: '#FFD84D', bg: 'rgba(255,216,77,0.09)',  border: 'rgba(255,216,77,0.22)' },
-  finished: { label: 'Finalizada',  color: '#3B6EFF', bg: 'rgba(59,110,255,0.09)',  border: 'rgba(59,110,255,0.22)' },
+type CampaignFormData = Omit<Campaign, 'id' | 'userId' | 'createdAt'>;
+
+const statusConfig: Record<CampaignStatus, { label: string; color: string; tone: string }> = {
+  active: { label: 'Ativa', color: '#34d399', tone: 'active' },
+  planned: { label: 'Planejada', color: '#5aa7ff', tone: 'planned' },
+  paused: { label: 'Pausada', color: '#facc15', tone: 'paused' },
+  finished: { label: 'Finalizada', color: '#a78bfa', tone: 'success' },
 };
 
 const statusFilters: Array<{ value: 'all' | CampaignStatus; label: string }> = [
-  { value: 'all',      label: 'Todas' },
-  { value: 'active',   label: 'Ativas' },
-  { value: 'planned',  label: 'Planejadas' },
-  { value: 'paused',   label: 'Pausadas' },
+  { value: 'all', label: 'Todas' },
+  { value: 'active', label: 'Ativas' },
+  { value: 'planned', label: 'Planejadas' },
+  { value: 'paused', label: 'Pausadas' },
   { value: 'finished', label: 'Finalizadas' },
 ];
 
-const emptyForm = (): Omit<Campaign, 'id' | 'userId' | 'createdAt'> => ({
-  name: '', objective: '', channel: '', status: 'planned',
-  startDate: '', endDate: '',
+const emptyForm = (): CampaignFormData => ({
+  name: '',
+  objective: '',
+  channel: '',
+  status: 'planned',
+  startDate: '',
+  endDate: '',
 });
 
-function NewCampaignModal({ onClose, onSave }: { onClose: () => void; onSave: (data: Omit<Campaign, 'id' | 'userId' | 'createdAt'>) => void }) {
-  const [form, setForm] = useState(emptyForm());
+function CampaignModal({
+  campaign,
+  onClose,
+  onSave,
+}: {
+  campaign?: Campaign | null;
+  onClose: () => void;
+  onSave: (data: CampaignFormData) => void;
+}) {
+  const [form, setForm] = useState<CampaignFormData>(() => campaign ? {
+    name: campaign.name,
+    objective: campaign.objective,
+    channel: campaign.channel,
+    status: campaign.status,
+    startDate: campaign.startDate,
+    endDate: campaign.endDate,
+  } : emptyForm());
 
-  const set = (k: keyof typeof form, v: string) => setForm(prev => ({ ...prev, [k]: v }));
-
-  const handleSubmit = () => {
-    if (!form.name.trim()) return;
-    onSave(form);
-  };
+  const set = (key: keyof CampaignFormData, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
+  const canSubmit = form.name.trim().length > 0;
 
   return (
-    <AnimatePresence>
-      <motion.div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-        <motion.div style={{ position: 'absolute', inset: 0, background: 'rgba(2,8,24,0.80)', backdropFilter: 'blur(8px)' }} onClick={onClose} />
-        <motion.div
-          style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 520, background: 'rgba(4,12,40,0.97)', backdropFilter: 'blur(40px)', border: '0.5px solid rgba(59,110,255,0.25)', borderRadius: 22, boxShadow: '0 40px 120px rgba(0,0,40,0.80)', overflow: 'hidden' }}
-          initial={{ opacity: 0, scale: 0.95, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.25 }}
-        >
-          <div style={{ height: 1, background: 'linear-gradient(90deg, transparent, rgba(59,110,255,0.50), rgba(32,245,216,0.30), transparent)' }} />
-          <div style={{ padding: '22px 26px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-              <h2 style={{ fontSize: 17, fontWeight: 800, color: 'var(--text-primary)' }}>Nova Campanha</h2>
-              <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                <X size={14} />
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {[
-                { key: 'name' as const, label: 'Nome da campanha *', placeholder: 'Ex: Lançamento Produto X' },
-                { key: 'objective' as const, label: 'Objetivo', placeholder: 'Ex: Gerar 200 leads qualificados' },
-                { key: 'channel' as const, label: 'Canal', placeholder: 'Ex: Instagram, TikTok, Email' },
-              ].map(({ key, label, placeholder }) => (
-                <div key={key}>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>{label}</label>
-                  <input
-                    value={form[key]}
-                    onChange={e => set(key, e.target.value)}
-                    placeholder={placeholder}
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.12)', color: 'var(--text-primary)', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
-                  />
-                </div>
-              ))}
-
-              <div>
-                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>Status</label>
-                <select value={form.status} onChange={e => set('status', e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.12)', color: 'var(--text-primary)', fontSize: 13, outline: 'none' }}>
-                  {(Object.keys(statusConfig) as CampaignStatus[]).map(s => (
-                    <option key={s} value={s} style={{ background: '#020818' }}>{statusConfig[s].label}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                {[
-                  { key: 'startDate' as const, label: 'Data de início' },
-                  { key: 'endDate' as const, label: 'Data de fim' },
-                ].map(({ key, label }) => (
-                  <div key={key}>
-                    <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 }}>{label}</label>
-                    <input type="date" value={form[key]} onChange={e => set(key, e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.12)', color: 'var(--text-primary)', fontSize: 13, outline: 'none', boxSizing: 'border-box', colorScheme: 'dark' }} />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
-              <button onClick={onClose} style={{ flex: 1, padding: '10px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.10)', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancelar</button>
-              <button onClick={handleSubmit} disabled={!form.name.trim()} style={{ flex: 2, padding: '10px', borderRadius: 10, background: form.name.trim() ? 'linear-gradient(135deg, #3B6EFF, #1A5CFF)' : 'rgba(59,110,255,0.25)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: form.name.trim() ? 'pointer' : 'default', border: 'none' }}>
-                Criar Campanha
-              </button>
-            </div>
-          </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+    <GlassModal
+      open
+      onClose={onClose}
+      title={campaign ? 'Editar campanha' : 'Nova campanha'}
+      description="Organize objetivo, canal, periodo e status sem sair do fluxo."
+      size="lg"
+    >
+      <div className="campaign-modal-form">
+        <GlassInput label="Nome da campanha" value={form.name} onChange={(event) => set('name', event.target.value)} placeholder="Ex: Lancamento Produto X" />
+        <GlassInput label="Objetivo" value={form.objective} onChange={(event) => set('objective', event.target.value)} placeholder="Ex: Gerar 200 leads qualificados" />
+        <GlassInput label="Canal" value={form.channel} onChange={(event) => set('channel', event.target.value)} placeholder="Instagram, TikTok, Email..." />
+        <GlassSelect label="Status" value={form.status} onChange={(event) => set('status', event.target.value)}>
+          {(Object.keys(statusConfig) as CampaignStatus[]).map((status) => (
+            <option key={status} value={status}>{statusConfig[status].label}</option>
+          ))}
+        </GlassSelect>
+        <GlassInput label="Data de inicio" type="date" value={form.startDate} onChange={(event) => set('startDate', event.target.value)} />
+        <GlassInput label="Data de fim" type="date" value={form.endDate} onChange={(event) => set('endDate', event.target.value)} />
+        <div className="campaign-modal-actions">
+          <GlassButton variant="ghost" onClick={onClose}>Cancelar</GlassButton>
+          <GlassButton variant="primary" onClick={() => canSubmit && onSave(form)} disabled={!canSubmit}>
+            {campaign ? 'Salvar alteracoes' : 'Criar campanha'}
+          </GlassButton>
+        </div>
+      </div>
+    </GlassModal>
   );
 }
 
@@ -127,186 +108,153 @@ export function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | CampaignStatus>('all');
-  const [showModal, setShowModal] = useState(false);
+  const [modalCampaign, setModalCampaign] = useState<Campaign | null | undefined>(undefined);
 
   const loadCampaigns = async () => {
     if (!user) return;
     const snap = await getDocs(
       query(collection(db, 'campaigns'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'))
     );
-    setCampaigns(snap.docs.map(d => ({ ...d.data(), id: d.id } as Campaign)));
+    setCampaigns(snap.docs.map((item) => ({ ...item.data(), id: item.id } as Campaign)));
     setLoading(false);
   };
 
-  useEffect(() => { loadCampaigns(); }, [user]);
-
-  const handleCreate = async (data: Omit<Campaign, 'id' | 'userId' | 'createdAt'>) => {
-    if (!user) return;
-    await addDoc(collection(db, 'campaigns'), { ...data, userId: user.uid, createdAt: serverTimestamp() });
-    setShowModal(false);
+  useEffect(() => {
     loadCampaigns();
+  }, [user]);
+
+  const handleSave = async (data: CampaignFormData) => {
+    if (!user) return;
+
+    if (modalCampaign?.id) {
+      await updateDoc(doc(db, 'campaigns', modalCampaign.id), data);
+      setCampaigns((prev) => prev.map((campaign) => campaign.id === modalCampaign.id ? { ...campaign, ...data } : campaign));
+    } else {
+      await addDoc(collection(db, 'campaigns'), { ...data, userId: user.uid, createdAt: serverTimestamp() });
+      await loadCampaigns();
+    }
+
+    setModalCampaign(undefined);
   };
 
   const handleStatusChange = async (id: string, status: CampaignStatus) => {
     await updateDoc(doc(db, 'campaigns', id), { status });
-    setCampaigns(prev => prev.map(c => c.id === id ? { ...c, status } : c));
+    setCampaigns((prev) => prev.map((campaign) => campaign.id === id ? { ...campaign, status } : campaign));
   };
 
   const handleDelete = async (id: string) => {
     await deleteDoc(doc(db, 'campaigns', id));
-    setCampaigns(prev => prev.filter(c => c.id !== id));
+    setCampaigns((prev) => prev.filter((campaign) => campaign.id !== id));
   };
 
-  const filtered = filter === 'all' ? campaigns : campaigns.filter(c => c.status === filter);
+  const filtered = filter === 'all' ? campaigns : campaigns.filter((campaign) => campaign.status === filter);
 
-  if (loading) {
-    return (
-      <Layout>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 300 }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ width: 32, height: 32, borderRadius: '50%', border: '2.5px solid rgba(59,110,255,0.15)', borderTopColor: '#3B6EFF', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
-            <p style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Carregando campanhas...</p>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
+  const stats = [
+    { label: 'Ativas', value: campaigns.filter((campaign) => campaign.status === 'active').length, color: '#34d399', icon: <TrendingUp size={20} /> },
+    { label: 'Planejadas', value: campaigns.filter((campaign) => campaign.status === 'planned').length, color: '#5aa7ff', icon: <Calendar size={20} /> },
+    { label: 'Pausadas', value: campaigns.filter((campaign) => campaign.status === 'paused').length, color: '#facc15', icon: <Pause size={20} /> },
+    { label: 'Finalizadas', value: campaigns.filter((campaign) => campaign.status === 'finished').length, color: '#a78bfa', icon: <Target size={20} /> },
+  ];
 
   return (
     <Layout>
-      <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-        <motion.div style={{ marginBottom: 24 }} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-            <div>
-              <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-0.025em', marginBottom: 5 }}>
-                <span style={{ background: 'linear-gradient(90deg, #8B5CF6, #EC4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Campanhas</span>
-              </h1>
-              <p style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>
-                {campaigns.filter(c => c.status === 'active').length} ativa{campaigns.filter(c => c.status === 'active').length !== 1 ? 's' : ''} · {campaigns.length} no total
-              </p>
-            </div>
-            <button
-              onClick={() => setShowModal(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 10, background: 'linear-gradient(135deg, #3B6EFF, #1A5CFF)', color: '#fff', fontWeight: 700, fontSize: 13, border: 'none', cursor: 'pointer', boxShadow: '0 4px 14px rgba(59,110,255,0.35)' }}
-            >
-              <Plus size={15} /> Nova Campanha
-            </button>
-          </div>
-        </motion.div>
+      <div className="pf-page campaigns-page">
+        <PageHeader
+          eyebrow={<><Megaphone size={14} /> Marketing OS</>}
+          title="Campanhas"
+          description="Planeje, acompanhe e ajuste iniciativas com cards, status e acoes consistentes no mesmo visual do PostFlow."
+          actions={<GlassButton variant="primary" onClick={() => setModalCampaign(null)}><Plus size={16} /> Nova campanha</GlassButton>}
+        />
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 22 }}>
-          {[
-            { label: 'Ativas',      value: campaigns.filter(c => c.status === 'active').length,   color: '#10D97A', bg: 'rgba(16,217,122,0.09)',  icon: TrendingUp },
-            { label: 'Planejadas',  value: campaigns.filter(c => c.status === 'planned').length,  color: '#94A3B8', bg: 'rgba(148,163,184,0.08)', icon: Calendar },
-            { label: 'Pausadas',    value: campaigns.filter(c => c.status === 'paused').length,   color: '#FFD84D', bg: 'rgba(255,216,77,0.08)',  icon: Target },
-            { label: 'Finalizadas', value: campaigns.filter(c => c.status === 'finished').length, color: '#3B6EFF', bg: 'rgba(59,110,255,0.09)',  icon: Megaphone },
-          ].map((s, i) => (
-            <motion.div key={s.label} className="glass-card" style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 12 }} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}>
-              <div style={{ width: 38, height: 38, borderRadius: 10, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <s.icon size={17} style={{ color: s.color }} />
-              </div>
-              <div>
-                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{s.label}</div>
-                <div style={{ fontSize: 22, fontWeight: 900, color: s.color, letterSpacing: '-0.02em' }}>{s.value}</div>
-              </div>
-            </motion.div>
+        <div className="metric-grid">
+          {stats.map((stat) => (
+            <MetricCard key={stat.label} label={stat.label} value={loading ? '-' : stat.value} icon={stat.icon} accent={stat.color} />
           ))}
         </div>
 
-        <div style={{ display: 'flex', gap: 6, marginBottom: 18, flexWrap: 'wrap' }}>
-          {statusFilters.map(f => (
-            <button
-              key={f.value}
-              onClick={() => setFilter(f.value)}
-              style={{ padding: '7px 14px', borderRadius: 9, fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', transition: 'all 150ms', ...(filter === f.value ? { background: 'linear-gradient(135deg, #3B6EFF, #1A5CFF)', color: '#fff' } : { background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)', border: '0.5px solid rgba(255,255,255,0.10)' }) }}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-
-        {filtered.length === 0 ? (
-          <motion.div className="glass-card" style={{ padding: 60, textAlign: 'center' }} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <Megaphone size={40} style={{ color: 'var(--text-tertiary)', margin: '0 auto 16px' }} />
-            <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
-              {campaigns.length === 0 ? 'Nenhuma campanha criada' : 'Nenhuma campanha para este filtro'}
-            </p>
-            <p style={{ fontSize: 12.5, color: 'var(--text-tertiary)', marginBottom: 16 }}>
-              {campaigns.length === 0 ? 'Crie sua primeira campanha para organizar suas ações de marketing.' : 'Tente outro filtro de status.'}
-            </p>
-            {campaigns.length === 0 && (
-              <button onClick={() => setShowModal(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, background: 'linear-gradient(135deg, #3B6EFF, #1A5CFF)', color: '#fff', fontWeight: 600, fontSize: 13, border: 'none', cursor: 'pointer' }}>
-                <Plus size={13} /> Nova Campanha
-              </button>
-            )}
-          </motion.div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 14 }}>
-            {filtered.map((campaign, i) => {
-              const s = statusConfig[campaign.status];
-              return (
-                <motion.div
-                  key={campaign.id}
-                  className="glass-card"
-                  style={{ padding: 20 }}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.06, duration: 0.3 }}
+        <DataPanel
+          title="Lista de campanhas"
+          description={`${filtered.length} campanha(s) no filtro atual`}
+          tools={
+            <div className="segmented-control">
+              {statusFilters.map((item) => (
+                <button
+                  key={item.value}
+                  className={filter === item.value ? 'active' : ''}
+                  onClick={() => setFilter(item.value)}
+                  type="button"
                 >
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <div style={{ flex: 1, minWidth: 0, marginRight: 10 }}>
-                      <h3 style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6, lineHeight: 1.3 }}>{campaign.name}</h3>
-                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: s.bg, color: s.color, border: `0.5px solid ${s.border}` }}>{s.label}</span>
-                        {campaign.channel && (
-                          <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 20, background: 'rgba(59,110,255,0.08)', color: '#7EB8FF', border: '0.5px solid rgba(59,110,255,0.15)' }}>{campaign.channel}</span>
-                        )}
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          }
+        >
+          {loading ? (
+            <div className="loading-state">
+              <div className="animate-spin" />
+              <span>Carregando campanhas...</span>
+            </div>
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              icon={<Megaphone size={30} />}
+              title={campaigns.length === 0 ? 'Nenhuma campanha criada' : 'Nenhuma campanha neste filtro'}
+              description={campaigns.length === 0 ? 'Crie sua primeira campanha para organizar objetivos, canais e periodos.' : 'Altere o filtro de status para ver outras campanhas.'}
+              action={campaigns.length === 0 ? <GlassButton variant="primary" onClick={() => setModalCampaign(null)}><Plus size={16} /> Nova campanha</GlassButton> : undefined}
+            />
+          ) : (
+            <div className="campaign-card-grid">
+              {filtered.map((campaign) => {
+                const status = statusConfig[campaign.status];
+                return (
+                  <article className="campaign-card glass-card" key={campaign.id}>
+                    <div className="campaign-card__top">
+                      <div>
+                        <h2>{campaign.name}</h2>
+                        <div className="campaign-card__chips">
+                          <span className="status-chip" data-status={status.tone}>{status.label}</span>
+                          {campaign.channel && <span className="status-chip">{campaign.channel}</span>}
+                        </div>
+                      </div>
+                      <div className="campaign-card__icon" style={{ color: status.color, background: `${status.color}1f` }}>
+                        <Megaphone size={18} />
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(139,92,246,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Megaphone size={15} style={{ color: '#8B5CF6' }} />
-                      </div>
+
+                    {campaign.objective && <p>{campaign.objective}</p>}
+
+                    <div className="campaign-card__date">
+                      <Calendar size={14} />
+                      <span>{campaign.startDate || 'Sem inicio'} ate {campaign.endDate || 'sem fim'}</span>
                     </div>
-                  </div>
 
-                  {campaign.objective && (
-                    <p style={{ fontSize: 12.5, color: 'var(--text-tertiary)', marginBottom: 12, lineHeight: 1.5 }}>{campaign.objective}</p>
-                  )}
-
-                  {(campaign.startDate || campaign.endDate) && (
-                    <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginBottom: 14, fontSize: 11, color: 'var(--text-tertiary)' }}>
-                      <Calendar size={10} />
-                      <span>{campaign.startDate || '—'} → {campaign.endDate || '—'}</span>
+                    <div className="campaign-card__actions">
+                      <GlassButton variant="secondary" size="sm" onClick={() => setModalCampaign(campaign)}>
+                        <Edit3 size={14} /> Editar
+                      </GlassButton>
+                      <GlassButton variant="secondary" size="sm" onClick={() => campaign.id && handleStatusChange(campaign.id, campaign.status === 'paused' ? 'active' : 'paused')}>
+                        <Pause size={14} /> {campaign.status === 'paused' ? 'Retomar' : 'Pausar'}
+                      </GlassButton>
+                      <GlassSelect aria-label="Alterar status" value={campaign.status} onChange={(event) => campaign.id && handleStatusChange(campaign.id, event.target.value as CampaignStatus)}>
+                        {(Object.keys(statusConfig) as CampaignStatus[]).map((item) => (
+                          <option key={item} value={item}>{statusConfig[item].label}</option>
+                        ))}
+                      </GlassSelect>
+                      <GlassButton variant="danger" size="icon" aria-label="Excluir campanha" onClick={() => campaign.id && handleDelete(campaign.id)}>
+                        <Trash2 size={14} />
+                      </GlassButton>
                     </div>
-                  )}
-
-                  <div style={{ display: 'flex', gap: 8, paddingTop: 12, borderTop: '0.5px solid rgba(255,255,255,0.06)', alignItems: 'center' }}>
-                    <select
-                      value={campaign.status}
-                      onChange={e => campaign.id && handleStatusChange(campaign.id, e.target.value as CampaignStatus)}
-                      onClick={e => e.stopPropagation()}
-                      style={{ flex: 1, height: 30, padding: '0 8px', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '0.5px solid rgba(255,255,255,0.10)', color: 'var(--text-secondary)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
-                    >
-                      {(Object.keys(statusConfig) as CampaignStatus[]).map(st => (
-                        <option key={st} value={st} style={{ background: '#020818' }}>{statusConfig[st].label}</option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={() => campaign.id && handleDelete(campaign.id)}
-                      style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(255,71,87,0.08)', border: '0.5px solid rgba(255,71,87,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#FF4757', flexShrink: 0 }}
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </DataPanel>
       </div>
 
-      {showModal && <NewCampaignModal onClose={() => setShowModal(false)} onSave={handleCreate} />}
+      {modalCampaign !== undefined && (
+        <CampaignModal campaign={modalCampaign} onClose={() => setModalCampaign(undefined)} onSave={handleSave} />
+      )}
     </Layout>
   );
 }

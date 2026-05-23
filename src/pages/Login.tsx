@@ -139,15 +139,15 @@ export function Login() {
               color: 'white', fontWeight: 900, fontSize: 20,
               boxShadow: '0 4px 20px rgba(0,59,255,0.50), 0 0 0 1px rgba(32,245,216,0.25)',
               flexShrink: 0, fontFamily: 'Inter, sans-serif',
-            }}>α</div>
+            }}>PF</div>
             <div>
               <div style={{
                 fontSize: 16, fontWeight: 800, letterSpacing: '-0.02em',
                 background: 'linear-gradient(90deg, #F7FBFF 0%, #20F5D8 100%)',
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
-              }}>Post Alpha</div>
-              <div style={{ fontSize: 10, color: 'rgba(140,170,220,0.50)', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 1 }}>Growth OS</div>
+              }}>PostFlow</div>
+              <div style={{ fontSize: 10, color: 'rgba(140,170,220,0.50)', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 1 }}>Creator OS</div>
             </div>
           </motion.div>
 
@@ -290,7 +290,7 @@ export function Login() {
                   <div style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.30)', borderTopColor: 'white', borderRadius: '50%', animation: 'spin 0.9s linear infinite' }} />
                   Entrando...
                 </>
-              ) : 'Acessar Growth OS'}
+              ) : 'Acessar PostFlow'}
             </button>
           </motion.form>
 
@@ -308,7 +308,7 @@ export function Login() {
           </motion.div>
 
           <p style={{ marginTop: 16, textAlign: 'center', fontSize: 11.5, color: 'rgba(140,170,220,0.25)', letterSpacing: '-0.005em' }}>
-            Post Alpha Growth OS © {new Date().getFullYear()}
+            PostFlow Creator OS © {new Date().getFullYear()}
           </p>
 
           {/* Bottom lock */}

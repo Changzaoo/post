@@ -28,6 +28,8 @@ const buttonVariants = cva(
           'bg-[rgba(255,69,58,0.10)] text-[#ff6b6b] border border-[rgba(255,69,58,0.22)] hover:bg-[rgba(255,69,58,0.18)]',
         destructive:
           'bg-[rgba(255,69,58,0.10)] text-[#ff6b6b] border border-[rgba(255,69,58,0.22)] hover:bg-[rgba(255,69,58,0.18)]',
+        success:
+          'bg-[rgba(52,211,153,0.12)] text-[var(--success)] border border-[rgba(52,211,153,0.25)] hover:bg-[rgba(52,211,153,0.18)]',
         gradient:
           'bg-gradient-to-r from-violet-500 to-indigo-500 text-white shadow-sm hover:from-violet-600 hover:to-indigo-600 hover:-translate-y-px',
         link:

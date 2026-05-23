@@ -1,35 +1,53 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { collection, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
+import { CalendarRange, FileText, PenSquare, Search, SlidersHorizontal } from 'lucide-react';
 import { Layout } from '../components/Layout';
-import { Card, CardContent } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
 import { PublishStatusBadge } from '../components/StatusBadge';
+import { DataPanel } from '../components/ui/DataPanel';
+import { EmptyState } from '../components/ui/EmptyState';
+import { GlassButton } from '../components/ui/GlassButton';
+import { GlassInput, GlassSelect } from '../components/ui/GlassInput';
+import { MetricCard } from '../components/ui/MetricCard';
+import { PageHeader } from '../components/ui/PageHeader';
+import { ResponsiveTable, type ResponsiveColumn } from '../components/ui/ResponsiveTable';
 import { useAuth } from '../contexts/AuthContext';
-import { collection, query, where, orderBy, getDocs, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { formatDate } from '../lib/utils';
-import type { PublishedPost, Platform } from '../types';
-import { FileText, PenSquare, Search, Grid, List } from 'lucide-react';
+import type { Platform, PublishedPost } from '../types';
 
 const PLATFORM_COLORS: Record<string, string> = {
-  instagram: '#e1306c', tiktok: '#ff0050', x: '#1da1f2',
-  telegram: '#0088cc', discord: '#5865f2', youtube: '#ff0000',
-  linkedin: '#0077b5', facebook: '#1877f2',
+  instagram: '#e1306c',
+  tiktok: '#ff0050',
+  x: '#1da1f2',
+  telegram: '#0088cc',
+  discord: '#5865f2',
+  youtube: '#ff0000',
+  linkedin: '#0077b5',
+  facebook: '#1877f2',
 };
 
-type ViewMode = 'list' | 'grid';
+function getPostStatus(post: PublishedPost) {
+  const statuses = Object.values(post.results ?? {}).map((result) => result.status);
+  if (statuses.some((status) => status === 'published')) return 'published';
+  if (statuses.some((status) => status === 'error')) return 'error';
+  if (statuses.some((status) => status === 'mocked')) return 'mocked';
+  return 'pending';
+}
 
 export function History() {
   const { user } = useAuth();
   const [posts, setPosts] = useState<PublishedPost[]>([]);
-  const [filtered, setFiltered] = useState<PublishedPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [platformFilter, setPlatformFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   useEffect(() => {
     if (!user) return;
+
     const load = async () => {
       try {
         const q = query(
@@ -39,174 +57,220 @@ export function History() {
           limit(100)
         );
         const snap = await getDocs(q);
-        const items = snap.docs.map((d) => ({
-          id: d.id, ...d.data(),
-          createdAt: d.data().createdAt?.toDate?.() ?? new Date(),
+        const items = snap.docs.map((item) => ({
+          id: item.id,
+          ...item.data(),
+          createdAt: item.data().createdAt?.toDate?.() ?? new Date(),
         })) as PublishedPost[];
         setPosts(items);
-        setFiltered(items);
-      } catch (err) { console.error('History load error:', err); }
-      finally { setLoading(false); }
+      } catch (err) {
+        console.error('History load error:', err);
+      } finally {
+        setLoading(false);
+      }
     };
+
     load();
   }, [user]);
 
-  useEffect(() => {
-    let result = posts;
-    if (search.trim()) result = result.filter((p) => p.baseText.toLowerCase().includes(search.toLowerCase()));
-    if (platformFilter !== 'all') result = result.filter((p) => p.selectedPlatforms.includes(platformFilter as Platform));
-    setFiltered(result);
-  }, [search, platformFilter, posts]);
+  const allPlatforms = useMemo(() => Array.from(new Set(posts.flatMap((post) => post.selectedPlatforms))), [posts]);
 
-  const allPlatforms = Array.from(new Set(posts.flatMap((p) => p.selectedPlatforms)));
+  const filtered = useMemo(() => {
+    return posts.filter((post) => {
+      const textOk = !search.trim() || post.baseText.toLowerCase().includes(search.toLowerCase());
+      const platformOk = platformFilter === 'all' || post.selectedPlatforms.includes(platformFilter as Platform);
+      const statusOk = statusFilter === 'all' || getPostStatus(post) === statusFilter;
+      const created = post.createdAt instanceof Date ? post.createdAt : new Date(post.createdAt);
+      const fromOk = !dateFrom || created >= new Date(`${dateFrom}T00:00:00`);
+      const toOk = !dateTo || created <= new Date(`${dateTo}T23:59:59`);
+      return textOk && platformOk && statusOk && fromOk && toOk;
+    });
+  }, [dateFrom, dateTo, platformFilter, posts, search, statusFilter]);
+
+  const metrics = [
+    { label: 'Registros', value: posts.length, icon: <FileText size={20} />, color: 'var(--accent)' },
+    { label: 'Publicados', value: posts.filter((post) => getPostStatus(post) === 'published').length, icon: <PenSquare size={20} />, color: 'var(--success)' },
+    { label: 'Pendentes', value: posts.filter((post) => getPostStatus(post) === 'pending').length, icon: <CalendarRange size={20} />, color: 'var(--warning)' },
+  ];
+
+  const columns: ResponsiveColumn<PublishedPost>[] = [
+    {
+      key: 'content',
+      header: 'Conteudo',
+      render: (post) => (
+        <div className="history-content-cell">
+          <strong>{post.baseText || '(sem texto)'}</strong>
+          <span>{formatDate(post.createdAt)}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'platforms',
+      header: 'Plataformas',
+      render: (post) => (
+        <div className="history-platforms">
+          {post.selectedPlatforms.map((platform: Platform) => (
+            <span
+              key={platform}
+              style={{
+                color: PLATFORM_COLORS[platform] ?? 'var(--text-secondary)',
+                background: `${PLATFORM_COLORS[platform] ?? '#94a3b8'}18`,
+              }}
+            >
+              {platform}
+            </span>
+          ))}
+        </div>
+      ),
+    },
+    {
+      key: 'date',
+      header: 'Data',
+      render: (post) => formatDate(post.createdAt),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (post) => (
+        <div className="history-status-list">
+          {Object.entries(post.results ?? {})
+            .filter(([platform]) => post.selectedPlatforms.includes(platform as Platform))
+            .map(([platform, result]) => (
+              <PublishStatusBadge key={platform} status={result.status} size="sm" />
+            ))}
+          {Object.keys(post.results ?? {}).length === 0 && <span className="status-chip" data-status="pending">Pendente</span>}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <Layout>
-      <div className="max-w-5xl mx-auto space-y-4">
-        {/* Filter bar */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 h-9 px-3 rounded-xl border border-white/10 bg-white/5 flex-1 min-w-48 hover:border-white/18 transition-colors">
-            <Search className="h-4 w-4 text-slate-500 shrink-0" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar publicações..."
-              className="bg-transparent text-sm text-slate-300 placeholder:text-slate-600 focus:outline-none flex-1"
+      <div className="pf-page">
+        <PageHeader
+          eyebrow={<><CalendarRange size={14} /> Logs e publicacoes</>}
+          title="Historico"
+          description="Acompanhe publicacoes, tentativas de envio, status por plataforma e filtros de auditoria em um painel responsivo."
+          actions={
+            <Link to="/composer" style={{ textDecoration: 'none' }}>
+              <GlassButton variant="primary"><PenSquare size={16} /> Nova publicacao</GlassButton>
+            </Link>
+          }
+        />
+
+        <div className="metric-grid">
+          {metrics.map((metric) => (
+            <MetricCard
+              key={metric.label}
+              label={metric.label}
+              value={loading ? '-' : metric.value}
+              icon={metric.icon}
+              accent={metric.color}
             />
-          </div>
-
-          <select
-            value={platformFilter}
-            onChange={(e) => setPlatformFilter(e.target.value)}
-            className="h-9 px-3 rounded-xl border border-white/10 bg-white/5 text-sm text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/25 hover:border-white/18 transition-colors"
-          >
-            <option value="all" className="bg-[#0d0d1a]">Todas as plataformas</option>
-            {allPlatforms.map((p) => (
-              <option key={p} value={p} className="bg-[#0d0d1a]">{p.charAt(0).toUpperCase() + p.slice(1)}</option>
-            ))}
-          </select>
-
-          <div className="flex items-center rounded-xl border border-white/10 bg-white/5 p-0.5">
-            <button
-              onClick={() => setViewMode('list')}
-              style={viewMode === 'list' ? { background: 'linear-gradient(135deg, #3B6EFF, #1A5CFF)', color: '#fff' } : {}}
-              className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${
-                viewMode === 'list' ? '' : 'text-slate-400 hover:text-slate-300'
-              }`}
-            >
-              <List className="h-3.5 w-3.5" />
-            </button>
-            <button
-              onClick={() => setViewMode('grid')}
-              style={viewMode === 'grid' ? { background: 'linear-gradient(135deg, #3B6EFF, #1A5CFF)', color: '#fff' } : {}}
-              className={`flex h-7 w-7 items-center justify-center rounded-lg transition-colors ${
-                viewMode === 'grid' ? '' : 'text-slate-400 hover:text-slate-300'
-              }`}
-            >
-              <Grid className="h-3.5 w-3.5" />
-            </button>
-          </div>
-
-          <span className="text-sm text-slate-400">{filtered.length} resultado(s)</span>
+          ))}
         </div>
 
-        {/* Content */}
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+        <DataPanel
+          title="Historico de atividade"
+          description={`${filtered.length} resultado(s) encontrados`}
+          tools={
+            <>
+              <GlassInput
+                aria-label="Buscar publicacoes"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Buscar publicacoes..."
+                style={{ minWidth: 240 }}
+              />
+              <GlassSelect aria-label="Filtrar status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <option value="all">Todos os status</option>
+                <option value="published">Publicado</option>
+                <option value="mocked">Demo</option>
+                <option value="error">Erro</option>
+                <option value="pending">Pendente</option>
+              </GlassSelect>
+            </>
+          }
+        >
+          <div className="history-filter-grid">
+            <div className="history-search-chip">
+              <Search size={15} />
+              <span>Filtros</span>
+            </div>
+            <GlassSelect aria-label="Filtrar plataforma" value={platformFilter} onChange={(event) => setPlatformFilter(event.target.value)}>
+              <option value="all">Todas as plataformas</option>
+              {allPlatforms.map((platform) => (
+                <option key={platform} value={platform}>{platform.charAt(0).toUpperCase() + platform.slice(1)}</option>
+              ))}
+            </GlassSelect>
+            <GlassInput aria-label="Data inicial" type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} />
+            <GlassInput aria-label="Data final" type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
+            <GlassButton
+              variant="ghost"
+              onClick={() => {
+                setSearch('');
+                setPlatformFilter('all');
+                setStatusFilter('all');
+                setDateFrom('');
+                setDateTo('');
+              }}
+            >
+              <SlidersHorizontal size={15} /> Limpar
+            </GlassButton>
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-20">
-            <FileText className="h-12 w-12 text-slate-200 mx-auto mb-4" />
-            <p className="text-slate-500 font-medium">Nenhuma publicação encontrada</p>
-            <p className="text-sm text-slate-400 mt-1 mb-6">
-              {search || platformFilter !== 'all' ? 'Tente ajustar os filtros' : 'Crie sua primeira publicação'}
-            </p>
-            <Link to="/composer">
-              <Button variant="primary" size="sm" className="gap-2">
-                <PenSquare className="h-4 w-4" /> Nova publicação
-              </Button>
-            </Link>
-          </div>
-        ) : viewMode === 'list' ? (
-          <div className="space-y-2">
-            {filtered.map((post) => (
-              <Card key={post.id} hover>
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-4">
-                    {post.mediaUrl ? (
-                      <div className="h-14 w-14 rounded-xl overflow-hidden shrink-0 bg-slate-100">
-                        <img src={post.mediaUrl} alt="" className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                      </div>
-                    ) : (
-                      <div className="h-14 w-14 rounded-xl bg-white/5 border border-white/7 flex items-center justify-center shrink-0">
-                        <FileText className="h-5 w-5 text-slate-600" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-200 truncate mb-1">{post.baseText}</p>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs text-slate-500">{formatDate(post.createdAt)}</span>
-                        <span className="text-slate-600">·</span>
-                        <div className="flex gap-1 flex-wrap">
-                          {post.selectedPlatforms.map((p: Platform) => (
-                            <span key={p} className="text-xs font-medium px-1.5 py-0.5 rounded-full"
-                              style={{ color: PLATFORM_COLORS[p] ?? '#94a3b8', backgroundColor: (PLATFORM_COLORS[p] ?? '#94a3b8') + '18' }}>
-                              {p}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-                      {Object.entries(post.results ?? {})
-                        .filter(([p]) => post.selectedPlatforms.includes(p as Platform))
-                        .map(([platform, result]) => (
-                          <PublishStatusBadge key={platform} status={result.status} size="sm" />
-                        ))}
-                    </div>
+
+          {loading ? (
+            <div className="loading-state">
+              <div className="animate-spin" />
+              <span>Carregando historico...</span>
+            </div>
+          ) : filtered.length === 0 ? (
+            <EmptyState
+              icon={<FileText size={30} />}
+              title="Nenhuma publicacao encontrada"
+              description={search || platformFilter !== 'all' || statusFilter !== 'all' || dateFrom || dateTo ? 'Ajuste os filtros para ampliar a busca.' : 'Crie sua primeira publicacao para preencher o historico.'}
+              action={
+                <Link to="/composer" style={{ textDecoration: 'none' }}>
+                  <GlassButton variant="primary"><PenSquare size={16} /> Nova publicacao</GlassButton>
+                </Link>
+              }
+            />
+          ) : (
+            <ResponsiveTable
+              rows={filtered}
+              columns={columns}
+              getRowKey={(post, index) => post.id ?? String(index)}
+              renderCard={(post) => (
+                <div className="history-mobile-card">
+                  <div className="history-content-cell">
+                    <strong>{post.baseText || '(sem texto)'}</strong>
+                    <span>{formatDate(post.createdAt)}</span>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((post) => (
-              <Card key={post.id} hover>
-                <div className="h-36 rounded-t-2xl overflow-hidden bg-white/5 border-b border-white/7 flex items-center justify-center">
-                  {post.mediaUrl ? (
-                    <img src={post.mediaUrl} alt="" className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                  ) : (
-                    <FileText className="h-8 w-8 text-slate-200" />
-                  )}
-                </div>
-                <CardContent className="p-4">
-                  <p className="text-sm font-medium text-slate-200 line-clamp-2 mb-3">{post.baseText}</p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex gap-1 flex-wrap">
-                      {post.selectedPlatforms.map((p: Platform) => (
-                        <span key={p} className="text-xs font-medium px-1.5 py-0.5 rounded-full"
-                          style={{ color: PLATFORM_COLORS[p] ?? '#94a3b8', backgroundColor: (PLATFORM_COLORS[p] ?? '#94a3b8') + '18' }}>
-                          {p}
-                        </span>
-                      ))}
-                    </div>
-                    <span className="text-xs text-slate-400">{post.createdAt.toLocaleDateString('pt-BR')}</span>
+                  <div className="history-platforms">
+                    {post.selectedPlatforms.map((platform: Platform) => (
+                      <span
+                        key={platform}
+                        style={{
+                          color: PLATFORM_COLORS[platform] ?? 'var(--text-secondary)',
+                          background: `${PLATFORM_COLORS[platform] ?? '#94a3b8'}18`,
+                        }}
+                      >
+                        {platform}
+                      </span>
+                    ))}
                   </div>
-                  <div className="mt-2 flex gap-1 flex-wrap">
+                  <div className="history-status-list">
                     {Object.entries(post.results ?? {})
-                      .filter(([p]) => post.selectedPlatforms.includes(p as Platform))
+                      .filter(([platform]) => post.selectedPlatforms.includes(platform as Platform))
                       .map(([platform, result]) => (
                         <PublishStatusBadge key={platform} status={result.status} size="sm" />
                       ))}
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+                </div>
+              )}
+            />
+          )}
+        </DataPanel>
       </div>
     </Layout>
   );

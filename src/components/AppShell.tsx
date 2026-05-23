@@ -1,34 +1,33 @@
-import { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Sidebar } from './Sidebar';
-import { Bell, Sun, Moon, Menu } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Bell, Menu, Moon, Sun } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
+import { Sidebar, mobileNavItems } from './Sidebar';
 
 interface AppShellProps {
   children: ReactNode;
-  title?: string;
 }
 
 const PAGE_TITLES: Record<string, string> = {
-  '/dashboard':       'Dashboard',
-  '/funil':           'Funil de Vendas',
-  '/retencao':        'Retenção de Público',
-  '/estrategias':     'Estratégias',
-  '/campanhas':       'Campanhas',
-  '/conteudos':       'Conteúdos',
-  '/checklist':       'Checklist de Conversão',
-  '/ia':              'Sugestões IA',
-  '/criativos':       'Agente de Criativos',
-  '/composer':        'Nova Publicação',
-  '/calendar':        'Calendário',
-  '/metrics':         'Métricas',
-  '/reels':           'Reels',
-  '/history':         'Histórico',
-  '/settings':        'Configurações',
-  '/admin':           'Admin',
-  '/funil-relevancia':'Funil de Relevância',
+  '/dashboard': 'Dashboard',
+  '/funil': 'Funil de Vendas',
+  '/retencao': 'Retencao de Publico',
+  '/estrategias': 'Estrategias',
+  '/campanhas': 'Campanhas',
+  '/conteudos': 'Conteudos',
+  '/checklist': 'Checklist de Conversao',
+  '/ia': 'Sugestoes IA',
+  '/criativos': 'Agente Criativo',
+  '/composer': 'Nova Publicacao',
+  '/calendar': 'Calendario',
+  '/metrics': 'Metricas',
+  '/reels': 'Reels',
+  '/history': 'Historico',
+  '/settings': 'Configuracoes',
+  '/admin': 'Admin',
+  '/funil-relevancia': 'Funil de Relevancia',
 };
 
 export function AppShell({ children }: AppShellProps) {
@@ -36,53 +35,33 @@ export function AppShell({ children }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
 
-  // Close mobile sidebar on route change
-  useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
-
-  // Prevent body scroll when mobile sidebar open
   useEffect(() => {
-    if (sidebarOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
+    setSidebarOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    document.body.style.overflow = sidebarOpen ? 'hidden' : '';
+    return () => {
       document.body.style.overflow = '';
-    }
-    return () => { document.body.style.overflow = ''; };
+    };
   }, [sidebarOpen]);
 
-  const pageTitle = PAGE_TITLES[location.pathname] ?? 'Post Alpha';
+  const pageTitle = PAGE_TITLES[location.pathname] ?? 'PostFlow';
 
   return (
     <>
-      {/* Background */}
       <div className="app-bg" />
-
-      {/* macOS window */}
       <div className="app-window">
-
-        {/* Topbar */}
-        <div className="app-topbar">
-          {/* Traffic lights */}
-          <div className="app-topbar-dots">
-            <div className="app-topbar-dot" style={{ background: '#ff5f57' }} />
-            <div className="app-topbar-dot" style={{ background: '#febc2e' }} />
-            <div className="app-topbar-dot" style={{ background: '#28c840' }} />
+        <header className="app-topbar">
+          <div className="topbar-brand">
+            <button className="sidebar-hamburger" onClick={() => setSidebarOpen(true)} aria-label="Abrir menu">
+              <Menu size={18} />
+            </button>
+            <div className="topbar-logo-mark" aria-hidden="true">PF</div>
+            <span className="app-topbar-title">{pageTitle}</span>
           </div>
 
-          {/* Mobile menu trigger */}
-          <button
-            className="sidebar-hamburger"
-            onClick={() => setSidebarOpen(true)}
-            aria-label="Abrir menu"
-          >
-            <Menu size={16} />
-          </button>
-
-          {/* Title */}
-          <span className="app-topbar-title">{pageTitle}</span>
-
-          {/* Actions */}
           <div className="app-topbar-actions">
-            {/* Theme toggle */}
             <button
               onClick={toggle}
               className="theme-toggle-btn"
@@ -91,63 +70,52 @@ export function AppShell({ children }: AppShellProps) {
             >
               <span className="theme-toggle-track">
                 <span className="theme-toggle-thumb">
-                  {theme === 'dark'
-                    ? <Moon className="theme-toggle-icon" />
-                    : <Sun  className="theme-toggle-icon" />}
+                  {theme === 'dark' ? <Moon className="theme-toggle-icon" /> : <Sun className="theme-toggle-icon" />}
                 </span>
               </span>
             </button>
 
-            {/* Notification bell */}
-            <button className="topbar-btn" aria-label="Notificações" style={{ position: 'relative' }}>
-              <Bell size={15} />
+            <button className="topbar-btn" aria-label="Notificacoes" style={{ position: 'relative' }}>
+              <Bell size={16} />
               <span
+                aria-hidden="true"
                 style={{
-                  position: 'absolute', top: 5, right: 5,
-                  width: 6, height: 6,
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  width: 7,
+                  height: 7,
                   borderRadius: '50%',
                   background: 'var(--accent)',
-                  border: '1.5px solid var(--bg-window)',
+                  border: '1.5px solid var(--bg-main)',
                 }}
               />
             </button>
           </div>
-        </div>
+        </header>
 
-        {/* Body */}
         <div className="app-body">
-          {/* Desktop sidebar */}
-          <div style={{ display: 'contents' }} className="sidebar-desktop-wrapper">
+          <div className="desktop-sidebar">
             <Sidebar />
           </div>
 
-          {/* Mobile sidebar overlay + panel */}
           <AnimatePresence>
             {sidebarOpen && (
               <>
-                {/* Overlay */}
                 <motion.div
                   className="sidebar-overlay"
-                  style={{ position: 'absolute', zIndex: 40 }}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.18, ease: 'easeOut' }}
                   onClick={() => setSidebarOpen(false)}
                 />
-                {/* Panel */}
                 <motion.div
-                  style={{
-                    position: 'absolute',
-                    top: 0, left: 0, bottom: 0,
-                    width: 'var(--sidebar-width)',
-                    zIndex: 50,
-                    display: 'flex',
-                  }}
+                  className="mobile-sidebar-panel"
                   initial={{ x: '-100%' }}
                   animate={{ x: 0 }}
                   exit={{ x: '-100%' }}
-                  transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+                  transition={{ type: 'spring', damping: 30, stiffness: 320 }}
                 >
                   <Sidebar onClose={() => setSidebarOpen(false)} />
                 </motion.div>
@@ -155,7 +123,6 @@ export function AppShell({ children }: AppShellProps) {
             )}
           </AnimatePresence>
 
-          {/* Main content — page transition */}
           <AnimatePresence mode="wait">
             <motion.main
               key={location.pathname}
@@ -163,12 +130,21 @@ export function AppShell({ children }: AppShellProps) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+              transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
             >
               {children}
             </motion.main>
           </AnimatePresence>
         </div>
+
+        <nav className="mobile-bottom-nav" aria-label="Navegacao principal mobile">
+          {mobileNavItems.map((item) => (
+            <NavLink key={item.path} to={item.path} className={({ isActive }) => (isActive ? 'active' : undefined)}>
+              <item.icon size={19} aria-hidden="true" />
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+        </nav>
       </div>
     </>
   );

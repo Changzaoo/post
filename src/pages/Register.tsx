@@ -135,10 +135,10 @@ export function Register() {
         >
           {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
-            <div className="sidebar-logo-icon" style={{ width: 36, height: 36, fontSize: 16, borderRadius: 10 }}>α</div>
+            <div className="sidebar-logo-icon" style={{ width: 36, height: 36, fontSize: 16, borderRadius: 10 }}>PF</div>
             <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: 'rgba(255,255,255,0.9)', letterSpacing: '-0.015em' }}>Post Alpha</div>
-              <div style={{ fontSize: 11, color: 'rgba(235,235,245,0.3)', marginTop: 1 }}>Growth OS</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: 'rgba(255,255,255,0.9)', letterSpacing: '-0.015em' }}>PostFlow</div>
+              <div style={{ fontSize: 11, color: 'rgba(235,235,245,0.3)', marginTop: 1 }}>Creator OS</div>
             </div>
           </div>
 

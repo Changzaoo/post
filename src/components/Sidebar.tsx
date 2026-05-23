@@ -6,11 +6,13 @@ import {
   TrendingUp, X, Target, Users, Layers, CheckSquare,
   Sparkles, Megaphone, FileText, Palette,
 } from 'lucide-react';
+import type { ElementType } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { GlassButton } from './ui/GlassButton';
 
-interface NavItem {
+export interface NavItem {
   label: string;
-  icon: React.ElementType;
+  icon: ElementType;
   path: string;
   adminOnly?: boolean;
   badge?: string;
@@ -22,9 +24,9 @@ interface NavGroup {
   items: NavItem[];
 }
 
-const navGroups: NavGroup[] = [
+export const navGroups: NavGroup[] = [
   {
-    label: 'Visão Geral',
+    label: 'Visao geral',
     items: [
       { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     ],
@@ -32,34 +34,42 @@ const navGroups: NavGroup[] = [
   {
     label: 'Growth OS',
     items: [
-      { label: 'Funil de Vendas',    icon: TrendingUp,   path: '/funil' },
-      { label: 'Retenção',           icon: Users,        path: '/retencao' },
-      { label: 'Estratégias',        icon: Target,       path: '/estrategias' },
-      { label: 'Campanhas',          icon: Megaphone,    path: '/campanhas' },
-      { label: 'Agente Criativos',   icon: Palette,      path: '/criativos', badge: 'Novo', badgeColor: '#FFD84D' },
-      { label: 'Conteúdos',          icon: FileText,     path: '/conteudos' },
-      { label: 'Checklist',          icon: CheckSquare,  path: '/checklist' },
-      { label: 'Sugestões IA',       icon: Sparkles,     path: '/ia', badge: 'Beta', badgeColor: '#20F5D8' },
+      { label: 'Funil de Vendas', icon: TrendingUp, path: '/funil' },
+      { label: 'Retencao', icon: Users, path: '/retencao' },
+      { label: 'Estrategias', icon: Target, path: '/estrategias' },
+      { label: 'Campanhas', icon: Megaphone, path: '/campanhas' },
+      { label: 'Agente Criativo', icon: Palette, path: '/criativos', badge: 'Novo', badgeColor: '#facc15' },
+      { label: 'Conteudos', icon: FileText, path: '/conteudos' },
+      { label: 'Checklist', icon: CheckSquare, path: '/checklist' },
+      { label: 'Sugestoes IA', icon: Sparkles, path: '/ia', badge: 'Beta', badgeColor: '#4ff7dd' },
     ],
   },
   {
-    label: 'Publicação',
+    label: 'Publicacao',
     items: [
-      { label: 'Nova Publicação', icon: PenSquare,  path: '/composer' },
-      { label: 'Calendário',      icon: Calendar,   path: '/calendar' },
-      { label: 'Métricas',        icon: BarChart3,  path: '/metrics' },
-      { label: 'Reels',           icon: Video,      path: '/reels' },
-      { label: 'Histórico',       icon: Clock,      path: '/history' },
-      { label: 'Funil Relevância',icon: Layers,     path: '/funil-relevancia' },
+      { label: 'Nova Publicacao', icon: PenSquare, path: '/composer' },
+      { label: 'Calendario', icon: Calendar, path: '/calendar' },
+      { label: 'Metricas', icon: BarChart3, path: '/metrics' },
+      { label: 'Reels', icon: Video, path: '/reels' },
+      { label: 'Historico', icon: Clock, path: '/history' },
+      { label: 'Funil Relevancia', icon: Layers, path: '/funil-relevancia' },
     ],
   },
   {
     label: 'Conta',
     items: [
-      { label: 'Configurações', icon: Settings2, path: '/settings' },
-      { label: 'Admin',         icon: Shield,    path: '/admin', adminOnly: true },
+      { label: 'Configuracoes', icon: Settings2, path: '/settings' },
+      { label: 'Admin', icon: Shield, path: '/admin', adminOnly: true },
     ],
   },
+];
+
+export const mobileNavItems: NavItem[] = [
+  { label: 'Inicio', icon: LayoutDashboard, path: '/dashboard' },
+  { label: 'Funil', icon: TrendingUp, path: '/funil' },
+  { label: 'Criar', icon: PenSquare, path: '/composer' },
+  { label: 'Agenda', icon: Calendar, path: '/calendar' },
+  { label: 'Conta', icon: Settings2, path: '/settings' },
 ];
 
 interface SidebarProps {
@@ -77,77 +87,72 @@ export function Sidebar({ onClose }: SidebarProps) {
 
   const initials = userProfile?.displayName
     ? userProfile.displayName.slice(0, 2).toUpperCase()
-    : userProfile?.username?.slice(0, 2).toUpperCase() ?? 'U';
+    : userProfile?.username?.slice(0, 2).toUpperCase() ?? 'PF';
 
   const roleLabel =
-    userProfile?.role === 'admin'  ? 'Admin' :
+    userProfile?.role === 'admin' ? 'Admin' :
     userProfile?.role === 'editor' ? 'Editor' :
-    'Growth Creator';
+    'Creator';
 
   let navIndex = 0;
 
   return (
-    <div className="app-sidebar">
-      {/* Logo */}
+    <aside className="app-sidebar" aria-label="Menu principal">
       <div className="sidebar-logo">
-        <div className="sidebar-logo-icon" style={{ fontFamily: 'Inter, sans-serif' }}>α</div>
+        <div className="sidebar-logo-icon" aria-hidden="true">PF</div>
         <div className="sidebar-logo-text">
-          <div className="name">Post Alpha</div>
-          <div className="sub">Growth OS</div>
+          <div className="name">PostFlow</div>
+          <div className="sub">Creator OS</div>
         </div>
 
         {onClose && (
-          <button
+          <GlassButton
             onClick={onClose}
             aria-label="Fechar menu"
-            style={{
-              marginLeft: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: 28, height: 28, borderRadius: 8,
-              background: 'rgba(59,110,255,0.08)', border: '0.5px solid rgba(59,110,255,0.18)',
-              cursor: 'pointer', color: 'var(--text-secondary)', flexShrink: 0,
-            }}
+            variant="ghost"
+            size="icon"
+            style={{ marginLeft: 'auto', width: 34, minWidth: 34, height: 34 }}
           >
-            <X size={14} />
-          </button>
+            <X size={16} />
+          </GlassButton>
         )}
       </div>
 
-      {/* Navigation */}
       <nav className="sidebar-nav">
         {navGroups.map((group) => {
-          const visibleItems = group.items.filter(item => !item.adminOnly || isAdmin);
+          const visibleItems = group.items.filter((item) => !item.adminOnly || isAdmin);
           if (visibleItems.length === 0) return null;
 
           return (
-            <div key={group.label} style={{ marginBottom: 4 }}>
+            <div key={group.label}>
               <div className="sidebar-section-label">{group.label}</div>
               {visibleItems.map((item) => {
                 const currentIndex = navIndex++;
                 return (
                   <motion.div
                     key={item.path}
-                    initial={{ opacity: 0, x: -10 }}
+                    initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: currentIndex * 0.035, duration: 0.22, ease: 'easeOut' }}
+                    transition={{ delay: currentIndex * 0.018, duration: 0.22, ease: 'easeOut' }}
                   >
-                    <NavLink
-                      to={item.path}
-                      className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}
-                      style={{ display: 'flex', alignItems: 'center', gap: 9, justifyContent: 'space-between' }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 1, minWidth: 0 }}>
-                        <item.icon className="icon" style={{ flexShrink: 0, width: 15, height: 15 }} />
+                    <NavLink to={item.path} className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                        <item.icon className="icon" aria-hidden="true" />
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
                       </div>
                       {item.badge && (
-                        <span style={{
-                          fontSize: 9, fontWeight: 700, letterSpacing: '0.04em',
-                          padding: '2px 6px', borderRadius: 20,
-                          background: `${item.badgeColor}18`,
-                          color: item.badgeColor,
-                          border: `0.5px solid ${item.badgeColor}30`,
-                          flexShrink: 0,
-                        }}>{item.badge}</span>
+                        <span
+                          className="status-chip"
+                          style={{
+                            minHeight: 20,
+                            fontSize: 9,
+                            color: item.badgeColor,
+                            background: `${item.badgeColor}18`,
+                            borderColor: `${item.badgeColor}30`,
+                          }}
+                        >
+                          {item.badge}
+                        </span>
                       )}
                     </NavLink>
                   </motion.div>
@@ -158,24 +163,14 @@ export function Sidebar({ onClose }: SidebarProps) {
         })}
       </nav>
 
-      {/* User */}
-      <div
-        className="sidebar-user"
-        onClick={handleLogout}
-        role="button"
-        tabIndex={0}
-        onKeyDown={e => e.key === 'Enter' && handleLogout()}
-        title="Sair da conta"
-      >
+      <button className="sidebar-user" onClick={handleLogout} type="button" title="Sair da conta">
         <div className="sidebar-user-avatar">{initials}</div>
         <div className="sidebar-user-info">
-          <div className="sidebar-user-name">
-            {userProfile?.displayName ?? userProfile?.username ?? 'User'}
-          </div>
+          <div className="sidebar-user-name">{userProfile?.displayName ?? userProfile?.username ?? 'Usuario'}</div>
           <div className="sidebar-user-role">{roleLabel}</div>
         </div>
-        <LogOut size={13} style={{ color: 'var(--text-tertiary)', flexShrink: 0, opacity: 0.7 }} />
-      </div>
-    </div>
+        <LogOut size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+      </button>
+    </aside>
   );
 }
