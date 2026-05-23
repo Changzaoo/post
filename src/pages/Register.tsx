@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
+import { BrandLogo } from '../components/BrandLogo';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Eye, EyeOff, CheckCircle, XCircle, Loader } from 'lucide-react';
@@ -135,11 +136,7 @@ export function Register() {
         >
           {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
-            <div className="sidebar-logo-icon" style={{ width: 36, height: 36, fontSize: 16, borderRadius: 10 }}>PF</div>
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: 'rgba(255,255,255,0.9)', letterSpacing: '-0.015em' }}>PostFlow</div>
-              <div style={{ fontSize: 11, color: 'rgba(235,235,245,0.3)', marginTop: 1 }}>Creator OS</div>
-            </div>
+            <BrandLogo size={44} showText />
           </div>
 
           <h2 style={{ fontSize: 21, fontWeight: 700, color: 'rgba(255,255,255,0.9)', letterSpacing: '-0.025em', marginBottom: 5 }}>

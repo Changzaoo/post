@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">PostFlow logo mark</title>
+  <desc id="desc">Gradient P mark with media cards and play icon.</desc>
+  <defs>
+    <linearGradient id="pf-main" x1="118" y1="95" x2="392" y2="426" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#6d35ff"/>
+      <stop offset=".34" stop-color="#df55ff"/>
+      <stop offset=".68" stop-color="#4f7cff"/>
+      <stop offset="1" stop-color="#1fb7ff"/>
+    </linearGradient>
+    <linearGradient id="pf-shadow" x1="226" y1="161" x2="407" y2="372" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2710a8"/>
+      <stop offset="1" stop-color="#1d55df"/>
+    </linearGradient>
+    <linearGradient id="pf-play" x1="274" y1="199" x2="329" y2="254" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffb957"/>
+      <stop offset=".48" stop-color="#ff3f93"/>
+      <stop offset="1" stop-color="#6d35ff"/>
+    </linearGradient>
+    <linearGradient id="pf-blue-card" x1="97" y1="159" x2="200" y2="246" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#77e8ff"/>
+      <stop offset="1" stop-color="#4676ff"/>
+    </linearGradient>
+    <linearGradient id="pf-purple-card" x1="75" y1="242" x2="207" y2="309" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8737ff"/>
+      <stop offset=".58" stop-color="#f04dff"/>
+      <stop offset="1" stop-color="#ff7c5d"/>
+    </linearGradient>
+    <linearGradient id="pf-pink-card" x1="98" y1="309" x2="220" y2="377" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffd05a"/>
+      <stop offset=".42" stop-color="#ff4b9f"/>
+      <stop offset="1" stop-color="#ff6d69"/>
+    </linearGradient>
+    <filter id="pf-soft-shadow" x="30" y="55" width="430" height="420" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#24145f" flood-opacity=".22"/>
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#ffffff" flood-opacity=".34"/>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="transparent"/>
+  <g filter="url(#pf-soft-shadow)">
+    <rect x="72" y="219" width="102" height="86" rx="19" fill="url(#pf-purple-card)" transform="rotate(-23 72 219)"/>
+    <rect x="107" y="161" width="132" height="112" rx="24" fill="url(#pf-blue-card)" transform="rotate(-18 107 161)"/>
+    <path fill="#fff" fill-opacity=".92" d="M126 232c8-19 12-29 18-30 5-1 11 9 18 21l9-18c3-6 9-8 13-2l27 40-91 19z"/>
+    <circle cx="135" cy="207" r="9" fill="#fff" fill-opacity=".95"/>
+    <rect x="93" y="269" width="142" height="88" rx="20" fill="url(#pf-purple-card)" transform="rotate(-10 93 269)"/>
+    <rect x="111" y="294" width="78" height="10" rx="5" fill="#fff" fill-opacity=".72" transform="rotate(-10 111 294)"/>
+    <rect x="115" y="319" width="95" height="10" rx="5" fill="#fff" fill-opacity=".72" transform="rotate(-10 115 319)"/>
+    <rect x="101" y="339" width="150" height="91" rx="20" fill="url(#pf-pink-card)" transform="rotate(-11 101 339)"/>
+    <circle cx="130" cy="385" r="9" fill="#fff" fill-opacity=".96"/>
+    <circle cx="160" cy="379" r="9" fill="#fff" fill-opacity=".96"/>
+    <circle cx="190" cy="373" r="9" fill="#fff" fill-opacity=".96"/>
+
+    <path fill="url(#pf-main)" d="M206 88h91c84 0 147 61 147 141 0 74-52 126-132 148-46 13-66 35-61 62l-1 1c-49-1-87-29-91-72-4-50 27-83 87-101 52-16 75-27 75-54 0-25-20-39-57-39h-60c-35 0-63 28-63 63v177c0 12-10 22-22 22h-18c-12 0-22-10-22-22V151c0-35 28-63 63-63z"/>
+    <path fill="url(#pf-shadow)" d="M204 174h76c41 0 69 15 80 42-7-51-45-79-106-79h-50c-35 0-63 28-63 63v65c9-54 34-91 63-91z" opacity=".78"/>
+    <path fill="#fff" d="M205 197h66c43 0 70 18 70 50 0 35-31 49-88 67-54 17-79 46-72 90 4 25 19 44 42 56-7-32 15-55 70-70 82-23 133-76 133-144 0-72-55-127-129-127h-91c-18 0-33 15-33 33v83c7-23 19-38 32-38z"/>
+    <path fill="url(#pf-play)" d="M274 220c0-17 18-28 33-19l43 26c15 9 15 31 0 40l-43 26c-15 9-33-2-33-19z"/>
+    <path fill="url(#pf-main)" d="M254 410c61 7 112-17 148-63l-36-10c-10-3-13-16-5-23l77-62c7-6 18-1 17 8l-11 96c-1 10-14 15-21 7l-18-21c-38 63-102 91-166 79z"/>
+  </g>
+</svg>

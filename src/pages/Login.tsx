@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { Eye, EyeOff, Zap, TrendingUp, Target, BarChart3, Shield } from 'lucide-react';
+import { BrandLogo } from '../components/BrandLogo';
 
 const floatingCards = [
   { icon: TrendingUp, label: 'Funil de Vendas', value: '+38%', color: '#20F5D8', x: -280, y: -60, delay: 0 },
@@ -132,23 +133,7 @@ export function Login() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2, duration: 0.4 }}
           >
-            <div style={{
-              width: 42, height: 42, borderRadius: 12,
-              background: 'linear-gradient(135deg, #003BFF 0%, #20F5D8 100%)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'white', fontWeight: 900, fontSize: 20,
-              boxShadow: '0 4px 20px rgba(0,59,255,0.50), 0 0 0 1px rgba(32,245,216,0.25)',
-              flexShrink: 0, fontFamily: 'Inter, sans-serif',
-            }}>PF</div>
-            <div>
-              <div style={{
-                fontSize: 16, fontWeight: 800, letterSpacing: '-0.02em',
-                background: 'linear-gradient(90deg, #F7FBFF 0%, #20F5D8 100%)',
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}>PostFlow</div>
-              <div style={{ fontSize: 10, color: 'rgba(140,170,220,0.50)', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 1 }}>Creator OS</div>
-            </div>
+            <BrandLogo size={50} showText />
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.4 }}>

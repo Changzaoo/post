@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import type { ElementType } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { BrandLogo } from './BrandLogo';
 import { GlassButton } from './ui/GlassButton';
 
 export interface NavItem {
@@ -99,11 +100,7 @@ export function Sidebar({ onClose }: SidebarProps) {
   return (
     <aside className="app-sidebar" aria-label="Menu principal">
       <div className="sidebar-logo">
-        <div className="sidebar-logo-icon" aria-hidden="true">PF</div>
-        <div className="sidebar-logo-text">
-          <div className="name">PostFlow</div>
-          <div className="sub">Creator OS</div>
-        </div>
+        <BrandLogo size={46} showText />
 
         {onClose && (
           <GlassButton

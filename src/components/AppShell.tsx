@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Bell, Menu, Moon, Sun } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
+import { BrandLogo } from './BrandLogo';
 import { Sidebar, mobileNavItems } from './Sidebar';
 
 interface AppShellProps {
@@ -57,7 +58,7 @@ export function AppShell({ children }: AppShellProps) {
             <button className="sidebar-hamburger" onClick={() => setSidebarOpen(true)} aria-label="Abrir menu">
               <Menu size={18} />
             </button>
-            <div className="topbar-logo-mark" aria-hidden="true">PF</div>
+            <BrandLogo className="topbar-logo-mark" size={36} />
             <span className="app-topbar-title">{pageTitle}</span>
           </div>
 

@@ -1,4 +1,5 @@
 import { Hash, Anchor } from 'lucide-react';
+import { BrandLogo } from './BrandLogo';
 
 interface Props {
   text: string;
@@ -20,9 +21,7 @@ export function DiscordPreview({ text, hashtags, mediaUrl, warnings }: Props) {
       {/* Message */}
       <div className="p-4">
         <div className="flex items-start gap-3">
-          <div className="h-9 w-9 rounded-full bg-blue-500 flex-shrink-0 flex items-center justify-center text-xs font-bold text-white">
-            PF
-          </div>
+          <BrandLogo size={36} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-white">PostFlow</span>
