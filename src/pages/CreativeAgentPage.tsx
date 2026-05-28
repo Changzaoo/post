@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout';
 import { Modal, ModalActions } from '../components/ui/Modal';
 import { useAuth } from '../contexts/AuthContext';
 import {
+  completeCreativeAgentBrief,
   createCreativeCampaign,
   createVariationFromCreative,
   defaultCreativeFormData,
@@ -151,9 +152,20 @@ export function CreativeAgentPage() {
   };
 
   const handleGenerate = () => {
-    const result = generateCreativeBundle(formData);
+    const hasName = Boolean((formData.agentName || formData.product).trim());
+    const hasCategory = Boolean(formData.contentCategory.trim());
+
+    if (!hasName || !hasCategory) {
+      setActiveTab('gerador');
+      setMessage('Digite apenas o nome e a categoria do conteudo para o agente criar o pacote completo.');
+      return;
+    }
+
+    const completedFormData = completeCreativeAgentBrief(formData);
+    const result = generateCreativeBundle(completedFormData);
+    setFormData(completedFormData);
     setGenerated(result);
-    setMessage('Criativos gerados com templates locais.');
+    setMessage(`Pacote completo criado para ${completedFormData.agentName}.`);
   };
 
   const handleSaveCreative = async (creative: Creative) => {
@@ -267,7 +279,7 @@ export function CreativeAgentPage() {
               Laboratório de marketing
             </div>
             <h1>Agente de Criativos</h1>
-            <p>Crie, teste e otimize anúncios, copies, roteiros e prompts visuais em um só lugar.</p>
+            <p>Digite nome e categoria. O agente monta campanhas, posts, reels, stories, copies, roteiros e prompts visuais.</p>
             <div className="creative-agent-storage-badge">
               Dados: {persistence === 'firestore' ? 'Firestore por usuário' : 'localStorage temporário'}
               {saving ? ' · salvando...' : ''}
@@ -275,13 +287,13 @@ export function CreativeAgentPage() {
           </div>
           <div className="creative-agent-hero-actions">
             <button className="btn btn-primary btn-md" type="button" onClick={() => setActiveTab('gerador')}>
-              <Plus size={15} /> Novo Criativo
+              <Plus size={15} /> Novo Briefing
             </button>
             <button className="btn btn-secondary btn-md" type="button" onClick={() => setCampaignModalOpen(true)}>
               <FolderPlus size={15} /> Nova Campanha
             </button>
             <button className="btn btn-cyan btn-md" type="button" onClick={() => { setActiveTab('gerador'); handleGenerate(); }}>
-              <Sparkles size={15} /> Gerar com Agente
+              <Sparkles size={15} /> Gerar Pacote
             </button>
             <button className="btn btn-secondary btn-md" type="button" onClick={() => setActiveTab('biblioteca')}>
               <BookOpen size={15} /> Biblioteca
@@ -318,7 +330,6 @@ export function CreativeAgentPage() {
                 onGenerate={handleGenerate}
                 onSaveCreative={handleSaveCreative}
                 onSaveAll={handleSaveAll}
-                onCreateCampaign={() => setCampaignModalOpen(true)}
               />
             )}
 

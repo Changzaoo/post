@@ -107,6 +107,8 @@ export interface Creative {
 }
 
 export interface CreativeFormData {
+  agentName: string;
+  contentCategory: string;
   campaignName: string;
   product: string;
   audience: string;
@@ -180,7 +182,53 @@ export interface CopyVariation {
   professionalVersion: string;
 }
 
+export interface AgentBrief {
+  name: string;
+  category: string;
+  positioning: string;
+  audience: string;
+  promise: string;
+  channels: string[];
+  productionRhythm: string;
+}
+
+export interface AgentCampaignPlan {
+  id: string;
+  title: string;
+  objective: string;
+  angle: string;
+  channels: string[];
+  deliverables: string[];
+  kpi: string;
+}
+
+export interface AgentContentPlan {
+  id: string;
+  format: string;
+  title: string;
+  hook: string;
+  caption: string;
+  cta: string;
+  productionNote: string;
+}
+
+export interface AgentCalendarItem {
+  id: string;
+  day: string;
+  channel: string;
+  title: string;
+  goal: string;
+}
+
 export interface CreativeGenerationResult {
+  agentBrief: AgentBrief;
+  campaigns: AgentCampaignPlan[];
+  postIdeas: AgentContentPlan[];
+  reelIdeas: AgentContentPlan[];
+  storyIdeas: AgentContentPlan[];
+  contentCalendar: AgentCalendarItem[];
+  hashtagSets: string[];
+  launchChecklist: string[];
   ideas: Creative[];
   headlines: string[];
   shortCalls: string[];

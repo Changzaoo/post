@@ -963,6 +963,95 @@ body {
   padding: 18px;
 }
 
+.creative-agent-agent-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.creative-agent-agent-intro {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.creative-agent-agent-intro h3,
+.creative-agent-mini-header h3 {
+  color: var(--text-primary);
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.creative-agent-agent-intro p,
+.creative-agent-mini-header p {
+  margin-top: 4px;
+  color: var(--text-tertiary);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.creative-agent-agent-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #20F5D8;
+  background: linear-gradient(135deg, rgba(32,245,216,0.14), rgba(126,184,255,0.10));
+  border: 0.5px solid rgba(32,245,216,0.22);
+}
+
+.creative-agent-agent-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.creative-agent-agent-input {
+  min-height: 48px;
+  font-size: 14px;
+}
+
+.creative-agent-category-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.creative-agent-category-chips button {
+  min-height: 30px;
+  border: 0.5px solid rgba(255,255,255,0.10);
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.05);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--duration) var(--ease-apple);
+}
+
+.creative-agent-category-chips button:hover {
+  color: var(--text-primary);
+  background: rgba(59,110,255,0.14);
+  border-color: rgba(59,110,255,0.26);
+}
+
+.creative-agent-agent-note {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 0.5px solid rgba(255,255,255,0.08);
+  color: var(--text-tertiary);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
 .creative-agent-form-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1000,6 +1089,121 @@ body {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.creative-agent-brief-panel,
+.creative-agent-calendar,
+.creative-agent-plan-card,
+.creative-agent-content-card {
+  padding: 16px;
+}
+
+.creative-agent-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.creative-agent-summary-item,
+.creative-agent-calendar-row {
+  padding: 11px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 0.5px solid rgba(255,255,255,0.08);
+}
+
+.creative-agent-summary-item span,
+.creative-agent-calendar-row span {
+  display: block;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+.creative-agent-summary-item p,
+.creative-agent-calendar-row p,
+.creative-agent-plan-card p,
+.creative-agent-content-card p {
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.creative-agent-pack-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.creative-agent-mini-header,
+.creative-agent-plan-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.creative-agent-plan-card-top {
+  justify-content: flex-start;
+  color: #20F5D8;
+}
+
+.creative-agent-plan-card-top strong {
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.creative-agent-plan-grid,
+.creative-agent-content-grid,
+.creative-agent-ops-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.creative-agent-ops-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.creative-agent-plan-card,
+.creative-agent-content-card,
+.creative-agent-calendar {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.creative-agent-plan-card small {
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.creative-agent-plan-list,
+.creative-agent-calendar-list {
+  display: grid;
+  gap: 7px;
+}
+
+.creative-agent-plan-list span {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 0.5px solid rgba(255,255,255,0.08);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.creative-agent-content-card h3,
+.creative-agent-calendar-row strong {
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.35;
 }
 
 .creative-agent-generated-ideas,
@@ -1542,6 +1746,9 @@ body {
   }
 
   .creative-agent-form-grid,
+  .creative-agent-agent-fields,
+  .creative-agent-summary-grid,
+  .creative-agent-ops-grid,
   .creative-agent-modal-grid,
   .creative-agent-detail-grid,
   .creative-agent-analysis-grid,

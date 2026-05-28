@@ -13,6 +13,10 @@ import {
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type {
+  AgentBrief,
+  AgentCalendarItem,
+  AgentCampaignPlan,
+  AgentContentPlan,
   CampaignObjective,
   CopyVariation,
   Creative,
@@ -90,6 +94,8 @@ export const statusOptions: CreativeStatus[] = [
 ];
 
 export const defaultCreativeFormData: CreativeFormData = {
+  agentName: '',
+  contentCategory: '',
   campaignName: '',
   product: '',
   audience: '',
@@ -151,6 +157,192 @@ export function sanitizeText(value: string, maxLength = 2200) {
     .replace(/[<>]/g, '')
     .trim()
     .slice(0, maxLength);
+}
+
+type CategoryProfile = {
+  audience: string;
+  pain: string;
+  desire: string;
+  objections: string;
+  promise: string;
+  tone: CreativeTone;
+  platform: CreativePlatform;
+  type: CreativeType;
+  objective: CampaignObjective;
+  channels: string[];
+  productionRhythm: string;
+  campaignAngles: string[];
+};
+
+function normalizeForMatch(value: string) {
+  return sanitizeText(value, 140)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function applyProfileTemplate(value: string, name: string, category: string) {
+  return value.replace(/\{name\}/g, name).replace(/\{category\}/g, category);
+}
+
+function resolveProfileText(profile: CategoryProfile, key: keyof Pick<CategoryProfile, 'audience' | 'pain' | 'desire' | 'objections' | 'promise'>, name: string, category: string) {
+  return applyProfileTemplate(profile[key], name, category);
+}
+
+function inferCategoryProfile(categoryInput: string): CategoryProfile {
+  const normalized = normalizeForMatch(categoryInput);
+  const includesAny = (terms: string[]) => terms.some((term) => normalized.includes(term));
+
+  if (includesAny(['curso', 'infoproduto', 'mentoria', 'aula', 'ebook', 'educacao', 'treinamento'])) {
+    return {
+      audience: 'pessoas que querem aprender {category} com um caminho claro e aplicavel',
+      pain: 'consumir muito conteudo solto sem saber o que fazer primeiro',
+      desire: 'aprender com seguranca e ver progresso real',
+      objections: 'achar que nao tem tempo, que e dificil ou que ja tentou antes',
+      promise: '{name} organiza {category} em um metodo simples para sair da duvida e agir',
+      tone: 'Educativo',
+      platform: 'Instagram Reels',
+      type: 'Vídeo curto',
+      objective: 'Capturar leads',
+      channels: ['Instagram Reels', 'Carrossel', 'Stories', 'Landing Page', 'E-mail'],
+      productionRhythm: '3 reels, 2 carrosseis, stories diarios e 1 oferta por semana',
+      campaignAngles: ['autoridade pratica', 'erro comum', 'antes e depois', 'mini-aula', 'prova de metodo'],
+    };
+  }
+
+  if (includesAny(['restaurante', 'delivery', 'comida', 'pizza', 'hamburguer', 'hamburgueria', 'bar', 'cafe', 'padaria'])) {
+    return {
+      audience: 'pessoas da regiao que querem comer bem com praticidade',
+      pain: 'decidir onde pedir sem cair em comida comum ou entrega frustrante',
+      desire: 'ter uma experiencia gostosa, rapida e confiavel',
+      objections: 'duvidar da qualidade, do tempo de entrega ou do custo-beneficio',
+      promise: '{name} transforma {category} em uma escolha facil para hoje',
+      tone: 'Emocional',
+      platform: 'Instagram Reels',
+      type: 'Vídeo curto',
+      objective: 'Vender',
+      channels: ['Instagram Reels', 'Stories', 'WhatsApp', 'Google Ads', 'Facebook Ads'],
+      productionRhythm: 'reels de desejo 4x por semana, stories diarios e ofertas nos horarios de pico',
+      campaignAngles: ['desejo visual', 'prova local', 'oferta relampago', 'bastidores', 'combo da semana'],
+    };
+  }
+
+  if (includesAny(['moda', 'beleza', 'estetica', 'cosmetico', 'salao', 'barbearia', 'maquiagem', 'skin'])) {
+    return {
+      audience: 'pessoas que buscam se sentir mais confiantes na propria imagem',
+      pain: 'comprar ou agendar sem saber se o resultado combina com seu estilo',
+      desire: 'se olhar e sentir que fez uma escolha certa',
+      objections: 'medo de nao gostar do resultado, pagar caro ou nao perceber diferenca',
+      promise: '{name} mostra {category} com prova visual, estilo e resultado real',
+      tone: 'Luxo',
+      platform: 'Instagram Reels',
+      type: 'Antes e depois',
+      objective: 'Gerar autoridade',
+      channels: ['Instagram Reels', 'Stories', 'Carrossel', 'TikTok', 'WhatsApp'],
+      productionRhythm: 'antes/depois 2x por semana, dicas 2x por semana e prova social diaria',
+      campaignAngles: ['transformacao', 'rotina de cuidado', 'prova social', 'comparativo', 'bastidores premium'],
+    };
+  }
+
+  if (includesAny(['fitness', 'academia', 'treino', 'nutri', 'saude', 'clinica', 'bem-estar', 'personal'])) {
+    return {
+      audience: 'pessoas que querem melhorar rotina, energia e consistencia',
+      pain: 'comecar animado e perder constancia depois de poucos dias',
+      desire: 'sentir evolucao sem depender de motivacao perfeita',
+      objections: 'achar que precisa de muito tempo, dinheiro ou disciplina extrema',
+      promise: '{name} cria um plano de {category} mais simples de manter',
+      tone: 'Direto',
+      platform: 'Instagram Reels',
+      type: 'Problema e solução',
+      objective: 'Capturar leads',
+      channels: ['Instagram Reels', 'Carrossel', 'Stories', 'YouTube Shorts', 'WhatsApp'],
+      productionRhythm: '3 reels educativos, 2 provas sociais e stories com acompanhamento semanal',
+      campaignAngles: ['consistencia', 'mito e verdade', 'evolucao real', 'micro-habito', 'desafio de 7 dias'],
+    };
+  }
+
+  if (includesAny(['imovel', 'imobili', 'apartamento', 'casa', 'corretor', 'condominio', 'terreno'])) {
+    return {
+      audience: 'pessoas avaliando uma decisao imobiliaria importante',
+      pain: 'ter medo de escolher errado, pagar caro ou perder uma boa oportunidade',
+      desire: 'comprar, vender ou investir com mais seguranca',
+      objections: 'nao saber se o preco, localizacao e financiamento fazem sentido',
+      promise: '{name} traduz {category} em decisao segura, comparavel e objetiva',
+      tone: 'Profissional',
+      platform: 'Instagram Reels',
+      type: 'Comparativo',
+      objective: 'Capturar leads',
+      channels: ['Instagram Reels', 'Carrossel', 'Google Ads', 'Landing Page', 'WhatsApp'],
+      productionRhythm: 'tour curto 2x por semana, comparativos 2x por semana e captação diaria no WhatsApp',
+      campaignAngles: ['tour guiado', 'comparativo de bairro', 'erro de compra', 'oportunidade limitada', 'simulacao simples'],
+    };
+  }
+
+  if (includesAny(['app', 'software', 'saas', 'sistema', 'plataforma', 'ia', 'automacao', 'crm', 'ferramenta'])) {
+    return {
+      audience: 'profissionais que querem reduzir trabalho manual e ganhar previsibilidade',
+      pain: 'perder tempo com processos repetitivos, planilhas e tarefas soltas',
+      desire: 'operar com mais controle, velocidade e clareza',
+      objections: 'achar que a implantacao sera complexa ou que a equipe nao vai usar',
+      promise: '{name} simplifica {category} para gerar rotina mais inteligente',
+      tone: 'Profissional',
+      platform: 'Landing Page',
+      type: 'Problema e solução',
+      objective: 'Capturar leads',
+      channels: ['Landing Page', 'Google Ads', 'LinkedIn', 'E-mail', 'YouTube Shorts'],
+      productionRhythm: '2 demos curtas, 2 posts de dor operacional e 1 caso de uso por semana',
+      campaignAngles: ['dor operacional', 'demo rapida', 'comparativo antes/depois', 'roi de tempo', 'caso de uso'],
+    };
+  }
+
+  if (includesAny(['loja', 'ecommerce', 'e-commerce', 'produto', 'varejo', 'acessorio', 'decoracao'])) {
+    return {
+      audience: 'compradores que querem escolher rapido sem se arrepender',
+      pain: 'ter muitas opcoes e pouca certeza sobre qual produto vale mais',
+      desire: 'comprar algo bonito, util e com bom custo-beneficio',
+      objections: 'duvidar da qualidade, prazo, garantia ou necessidade real',
+      promise: '{name} posiciona {category} com desejo, prova e decisao facil',
+      tone: 'Direto',
+      platform: 'Instagram Reels',
+      type: 'Oferta direta',
+      objective: 'Vender',
+      channels: ['Instagram Reels', 'Stories', 'Facebook Ads', 'Google Ads', 'E-mail'],
+      productionRhythm: 'ofertas 3x por semana, prova social 2x por semana e retargeting diario',
+      campaignAngles: ['beneficio pratico', 'unboxing', 'comparativo', 'prova social', 'oferta por tempo limitado'],
+    };
+  }
+
+  if (includesAny(['evento', 'show', 'workshop', 'congresso', 'palestra', 'festival', 'webinar'])) {
+    return {
+      audience: 'pessoas que podem participar se entenderem o valor e a urgencia',
+      pain: 'deixar para depois e perder uma oportunidade que combina com seus interesses',
+      desire: 'viver uma experiencia util, memoravel ou transformadora',
+      objections: 'nao saber se vale o tempo, o deslocamento ou o investimento',
+      promise: '{name} torna {category} uma experiencia que vale reservar agora',
+      tone: 'Viral',
+      platform: 'Instagram Reels',
+      type: 'Storytelling',
+      objective: 'Gerar curiosidade',
+      channels: ['Instagram Reels', 'Stories', 'TikTok', 'Landing Page', 'WhatsApp'],
+      productionRhythm: 'contagem regressiva diaria, 3 reels semanais e prova social ate o evento',
+      campaignAngles: ['contagem regressiva', 'bastidores', 'autoridade dos convidados', 'medo de perder', 'experiencia ao vivo'],
+    };
+  }
+
+  return {
+    audience: 'pessoas interessadas em {category} que precisam de uma decisao mais clara',
+    pain: 'ter informacao demais e pouca clareza sobre o proximo passo',
+    desire: 'entender o valor rapidamente e agir com confianca',
+    objections: 'nao saber se {name} realmente resolve, se vale o preco ou se e para elas',
+    promise: '{name} mostra {category} de forma simples, desejavel e convincente',
+    tone: 'Direto',
+    platform: 'Instagram Reels',
+    type: 'Vídeo curto',
+    objective: 'Gerar autoridade',
+    channels: ['Instagram Reels', 'Carrossel', 'Stories', 'Facebook Ads', 'Landing Page'],
+    productionRhythm: '3 reels, 2 posts/carrosseis, stories diarios e 1 CTA forte por semana',
+    campaignAngles: ['clareza de valor', 'prova social', 'comparativo', 'educacao rapida', 'oferta direta'],
+  };
 }
 
 function safeNumber(value: unknown, fallback = 0) {
@@ -282,15 +474,46 @@ function deleteLocalCreative(userId: string, creativeId: string) {
   writeLocal(userId, 'creatives', items);
 }
 
-function getFormContext(form: CreativeFormData) {
-  const product = sanitizeText(form.product) || 'seu produto';
-  const audience = sanitizeText(form.audience) || 'pessoas que precisam resolver esse problema';
-  const pain = sanitizeText(form.pain) || 'perder tempo e dinheiro com alternativas erradas';
-  const desire = sanitizeText(form.desire) || 'ter um resultado claro, simples e confiável';
-  const objections = sanitizeText(form.objections) || 'achar que é difícil, caro ou arriscado';
-  const promise = sanitizeText(form.promise) || `chegar ao próximo nível com ${product}`;
-  const campaignName = sanitizeText(form.campaignName) || `Campanha ${product}`;
+export function completeCreativeAgentBrief(form: CreativeFormData): CreativeFormData {
+  const inputName = sanitizeText(form.agentName, 120);
+  const inputCategory = sanitizeText(form.contentCategory, 120);
+  const name = inputName || sanitizeText(form.product || form.campaignName, 120) || 'Seu projeto';
+  const category = inputCategory || sanitizeText(form.type, 120) || 'conteudo digital';
+  const profile = inferCategoryProfile(category);
+  const shouldInferFormat = Boolean(inputName || inputCategory);
+
   return {
+    ...form,
+    agentName: name,
+    contentCategory: category,
+    campaignName: sanitizeText(form.campaignName, 160) || `${name} | Plano de ${category}`,
+    product: sanitizeText(form.product, 180) || name,
+    audience: sanitizeText(form.audience, 260) || resolveProfileText(profile, 'audience', name, category),
+    pain: sanitizeText(form.pain, 260) || resolveProfileText(profile, 'pain', name, category),
+    desire: sanitizeText(form.desire, 260) || resolveProfileText(profile, 'desire', name, category),
+    objections: sanitizeText(form.objections, 260) || resolveProfileText(profile, 'objections', name, category),
+    promise: sanitizeText(form.promise, 300) || resolveProfileText(profile, 'promise', name, category),
+    tone: shouldInferFormat ? profile.tone : form.tone,
+    platform: shouldInferFormat ? profile.platform : form.platform,
+    type: shouldInferFormat ? profile.type : form.type,
+    objective: shouldInferFormat ? profile.objective : form.objective,
+  };
+}
+
+function getFormContext(form: CreativeFormData) {
+  const completed = completeCreativeAgentBrief(form);
+  const agentName = sanitizeText(completed.agentName, 120) || 'Seu projeto';
+  const contentCategory = sanitizeText(completed.contentCategory, 120) || 'conteudo digital';
+  const product = sanitizeText(completed.product) || agentName;
+  const audience = sanitizeText(completed.audience) || 'pessoas que precisam resolver esse problema';
+  const pain = sanitizeText(completed.pain) || 'perder tempo e dinheiro com alternativas erradas';
+  const desire = sanitizeText(completed.desire) || 'ter um resultado claro, simples e confiavel';
+  const objections = sanitizeText(completed.objections) || 'achar que e dificil, caro ou arriscado';
+  const promise = sanitizeText(completed.promise) || `chegar ao proximo nivel com ${product}`;
+  const campaignName = sanitizeText(completed.campaignName) || `Campanha ${product}`;
+  return {
+    agentName,
+    contentCategory,
     campaignName,
     product,
     audience,
@@ -298,10 +521,10 @@ function getFormContext(form: CreativeFormData) {
     desire,
     objections,
     promise,
-    tone: form.tone,
-    platform: form.platform,
-    type: form.type,
-    objective: form.objective,
+    tone: completed.tone,
+    platform: completed.platform,
+    type: completed.type,
+    objective: completed.objective,
   };
 }
 
@@ -501,11 +724,28 @@ export function generateCreativeIdeas(form: CreativeFormData, count = 10): Creat
   const scripts = generateShortVideoScripts(form, 5);
   const prompts = generateVisualPrompts(form, 5);
   const now = new Date().toISOString();
+  const formats: Array<{
+    label: string;
+    platform: CreativePlatform;
+    type: CreativeType;
+    tone: CreativeTone;
+    objective: CampaignObjective;
+  }> = [
+    { label: 'Reel de gancho', platform: 'Instagram Reels', type: 'Vídeo curto', tone: ctx.tone, objective: ctx.objective },
+    { label: 'Carrossel educativo', platform: 'Carrossel', type: 'Carrossel', tone: 'Educativo', objective: 'Gerar autoridade' },
+    { label: 'Story de conversao', platform: 'Stories', type: 'Oferta direta', tone: 'Direto', objective: 'Vender' },
+    { label: 'Anuncio de prova', platform: 'Facebook Ads', type: 'Prova social', tone: 'Profissional', objective: 'Vender' },
+    { label: 'Short de descoberta', platform: 'YouTube Shorts', type: 'Script de vídeo', tone: 'Viral', objective: 'Gerar curiosidade' },
+    { label: 'Headline de busca', platform: 'Google Ads', type: 'Headline', tone: 'Direto', objective: 'Capturar leads' },
+    { label: 'Oferta de landing page', platform: 'Landing Page', type: 'Texto de anúncio', tone: 'Profissional', objective: 'Capturar leads' },
+    { label: 'TikTok de bastidor', platform: 'TikTok', type: 'Storytelling', tone: 'Emocional', objective: 'Aquecer público frio' },
+  ];
 
   return headlines.map((headline, index) => {
     const emotion = emotionByIndex(index);
-    const title = `${ctx.product} - ${emotion} ${index + 1}`;
-    const copy = `${ctx.audience} quer ${ctx.desire}, mas ${ctx.pain} continua travando a decisão. Este criativo apresenta ${ctx.product} como uma forma clara de ${ctx.promise}, respondendo a objeção: ${ctx.objections}.`;
+    const format = formats[index % formats.length];
+    const title = `${ctx.product} - ${format.label} ${index + 1}`;
+    const copy = `${ctx.audience} quer ${ctx.desire}, mas ${ctx.pain} continua travando a decisao. Este criativo apresenta ${ctx.product} como uma forma clara de ${ctx.promise}, respondendo a objecao: ${ctx.objections}.`;
     const creative: Creative = {
       id: createId('creative'),
       campaignName: ctx.campaignName,
@@ -515,12 +755,12 @@ export function generateCreativeIdeas(form: CreativeFormData, count = 10): Creat
       desire: ctx.desire,
       objections: ctx.objections,
       promise: ctx.promise,
-      platform: ctx.platform,
-      type: ctx.type,
-      tone: ctx.tone,
-      objective: ctx.objective,
+      platform: format.platform,
+      type: format.type,
+      tone: format.tone,
+      objective: format.objective,
       title,
-      description: `Ângulo ${emotion.toLowerCase()} para comunicar ${ctx.promise} e reduzir ${ctx.objections}.`,
+      description: `${format.label} com angulo de ${emotion.toLowerCase()} para comunicar ${ctx.promise} e reduzir ${ctx.objections}.`,
       headline,
       copy,
       mainText: copy,
@@ -555,17 +795,139 @@ export function generateCreativeIdeas(form: CreativeFormData, count = 10): Creat
   }).slice(0, count);
 }
 
-export function generateCreativeBundle(form: CreativeFormData): CreativeGenerationResult {
+export function generateAgentBrief(form: CreativeFormData): AgentBrief {
   const ctx = getFormContext(form);
+  const profile = inferCategoryProfile(ctx.contentCategory);
+
   return {
-    ideas: generateCreativeIdeas(form, 10),
-    headlines: generateHeadlines(form, 10),
-    shortCalls: generateShortCalls(form, 10),
-    copies: generateCopies(form, 5),
-    scripts: generateShortVideoScripts(form, 5),
-    carouselIdeas: generateCarouselIdeas(form, 5),
-    ctas: generateCTAs(form, 5),
-    salesAngles: generateSalesAngles(form, 5),
+    name: ctx.agentName,
+    category: ctx.contentCategory,
+    positioning: `${ctx.product} deve ser apresentado como a escolha simples para quem quer ${ctx.desire}, sem ficar preso em ${ctx.pain}.`,
+    audience: ctx.audience,
+    promise: ctx.promise,
+    channels: profile.channels,
+    productionRhythm: profile.productionRhythm,
+  };
+}
+
+export function generateAgentCampaignPlans(form: CreativeFormData, count = 4): AgentCampaignPlan[] {
+  const ctx = getFormContext(form);
+  const profile = inferCategoryProfile(ctx.contentCategory);
+  const objectives = ['Atrair publico frio', 'Gerar confianca', 'Converter interessados', 'Reativar indecisos'];
+
+  return profile.campaignAngles.slice(0, count).map((angle, index) => ({
+    id: createId('campaign-plan'),
+    title: `${ctx.product} - ${angle}`,
+    objective: objectives[index % objectives.length],
+    angle: `Usar ${angle} para conectar ${ctx.pain} com ${ctx.promise}.`,
+    channels: profile.channels.slice(0, index === 2 ? 5 : 3),
+    deliverables: [
+      `${index + 2} reels ou shorts`,
+      '1 carrossel de apoio',
+      'sequencia de stories com CTA',
+      index % 2 === 0 ? 'copy de anuncio' : 'mensagem de WhatsApp/e-mail',
+    ],
+    kpi: index < 2 ? 'CTR, salvamentos e respostas' : 'leads, conversas e conversoes',
+  }));
+}
+
+function buildContentPlans(form: CreativeFormData, format: string, count: number): AgentContentPlan[] {
+  const ctx = getFormContext(form);
+  const headlines = generateHeadlines(form, count);
+  const ctas = generateCTAs(form, 5);
+  const notes: Record<'post' | 'reel' | 'story', string> = {
+    post: 'Use imagem limpa, titulo forte e legenda com prova ou passo pratico.',
+    reel: 'Abra com movimento nos 2 primeiros segundos e mantenha cortes curtos.',
+    story: 'Use enquete, caixa de pergunta ou sticker antes do CTA final.',
+  };
+  const noteKey: 'post' | 'reel' | 'story' = format.toLowerCase().includes('reel') ? 'reel' : format.toLowerCase().includes('story') ? 'story' : 'post';
+
+  return headlines.slice(0, count).map((headline, index) => ({
+    id: createId('content-plan'),
+    format,
+    title: `${format} ${index + 1}: ${emotionByIndex(index)}`,
+    hook: headline,
+    caption: `${ctx.audience} sente ${ctx.pain}. Mostre ${ctx.product} como o caminho para ${ctx.desire} com a promessa: ${ctx.promise}.`,
+    cta: ctas[index % ctas.length],
+    productionNote: notes[noteKey],
+  }));
+}
+
+export function generatePostIdeas(form: CreativeFormData, count = 6): AgentContentPlan[] {
+  return buildContentPlans(form, 'Post/Carrossel', count);
+}
+
+export function generateReelIdeas(form: CreativeFormData, count = 6): AgentContentPlan[] {
+  return buildContentPlans(form, 'Reel/Short', count);
+}
+
+export function generateStoryIdeas(form: CreativeFormData, count = 5): AgentContentPlan[] {
+  return buildContentPlans(form, 'Story', count);
+}
+
+export function generateContentCalendar(form: CreativeFormData): AgentCalendarItem[] {
+  const ctx = getFormContext(form);
+  const profile = inferCategoryProfile(ctx.contentCategory);
+  const days = ['Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado', 'Domingo'];
+  const goals = ['Atrair', 'Educar', 'Provar', 'Converter', 'Relacionar', 'Retargeting', 'Revisar aprendizados'];
+
+  return days.map((day, index) => ({
+    id: createId('calendar-item'),
+    day,
+    channel: profile.channels[index % profile.channels.length],
+    title: index === 6 ? `Resumo da semana de ${ctx.product}` : `${profile.campaignAngles[index % profile.campaignAngles.length]} para ${ctx.product}`,
+    goal: goals[index],
+  }));
+}
+
+export function generateHashtagSets(form: CreativeFormData, count = 4) {
+  const ctx = getFormContext(form);
+  const category = normalizeForMatch(ctx.contentCategory).replace(/\s+/g, '');
+  const name = normalizeForMatch(ctx.product).replace(/\s+/g, '');
+  const base = category || 'conteudo';
+
+  return [
+    `#${name || 'marca'} #${base} #conteudointeligente #solucaopratica #marketingdigital`,
+    `#${base}brasil #dicas${base} #negocioslocais #vendasonline #estrategiadeconteudo`,
+    `#${name || base} #oferta #provasocial #clientesatisfeito #crescimento`,
+    `#${base} #reelsbrasil #empreendedorismo #conteudoparainstagram #cta`,
+  ].slice(0, count);
+}
+
+export function generateLaunchChecklist(form: CreativeFormData) {
+  const ctx = getFormContext(form);
+
+  return [
+    `Definir promessa central: ${ctx.promise}`,
+    `Separar 3 provas: resultado, bastidor e comparativo de ${ctx.product}`,
+    'Publicar primeiro reel com gancho de dor e CTA leve',
+    'Subir carrossel educativo para salvar e compartilhar',
+    'Rodar stories com enquete antes da oferta',
+    'Criar anuncio com o melhor gancho da semana',
+    'Revisar CTR, respostas e conversoes para escolher o proximo teste',
+  ];
+}
+
+export function generateCreativeBundle(form: CreativeFormData): CreativeGenerationResult {
+  const completed = completeCreativeAgentBrief(form);
+  const ctx = getFormContext(completed);
+  return {
+    agentBrief: generateAgentBrief(completed),
+    campaigns: generateAgentCampaignPlans(completed, 4),
+    postIdeas: generatePostIdeas(completed, 6),
+    reelIdeas: generateReelIdeas(completed, 6),
+    storyIdeas: generateStoryIdeas(completed, 5),
+    contentCalendar: generateContentCalendar(completed),
+    hashtagSets: generateHashtagSets(completed, 4),
+    launchChecklist: generateLaunchChecklist(completed),
+    ideas: generateCreativeIdeas(completed, 10),
+    headlines: generateHeadlines(completed, 10),
+    shortCalls: generateShortCalls(completed, 10),
+    copies: generateCopies(completed, 5),
+    scripts: generateShortVideoScripts(completed, 5),
+    carouselIdeas: generateCarouselIdeas(completed, 5),
+    ctas: generateCTAs(completed, 5),
+    salesAngles: generateSalesAngles(completed, 5),
     emotionalVariations: [
       `Imagine finalmente sair de ${ctx.pain} e sentir ${ctx.desire}.`,
       `${ctx.product} para quem já cansou de tentar sozinho.`,
@@ -587,7 +949,7 @@ export function generateCreativeBundle(form: CreativeFormData): CreativeGenerati
       `O mapa simples para chegar a ${ctx.desire}.`,
       `O que testar antes de escalar este anúncio.`,
     ],
-    visualPrompts: generateVisualPrompts(form, 5),
+    visualPrompts: generateVisualPrompts(completed, 5),
   };
 }
 
@@ -754,6 +1116,8 @@ export function updateCreativeStatus(creative: Creative, status: CreativeStatus)
 export function createVariationFromCreative(creative: Creative, tone: CreativeTone = 'Direto'): Creative {
   const duplicated = duplicateCreative(creative);
   const form: CreativeFormData = {
+    agentName: '',
+    contentCategory: '',
     campaignName: creative.campaignName,
     product: creative.product,
     audience: creative.audience,
